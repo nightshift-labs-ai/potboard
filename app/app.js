@@ -7,7 +7,7 @@ const ROUTES = { // #/ #/bounty/:s #/bounty/:s/leaderboard/:p #/u/:h
 
 export async function api(path) { // Map cache + ETag revalidation
   const old = cache.get(path);
-  const m = minute();
+  const m = Math.floor(Date.now() / 60000);
   if (old && old.minute === m) return old.data;
   if (inflight.has(path)) return inflight.get(path);
   const p = load(path, old, m);
@@ -25,8 +25,8 @@ function board(data) { // keyed rows, patched in place
     else if (Date.parse(b.deadline) > now) open.push(b);
     else shut.push(b);
   }
-  open.sort(byDeadline);
-  soon.sort(byOpening);
+  open.sort((a, b) => Date.parse(a.deadline) - Date.parse(b.deadline));
+  soon.sort((a, b) => Date.parse(a.publishedAt) - Date.parse(b.publishedAt));
   let pot = 0;
   let n = 0;
   for (const b of open) { pot += Number(b.potUsd) || 0; n += b.submissionCount || 0; }
@@ -66,23 +66,20 @@ async function route(quiet) {
   current = path;
   for (const a of document.querySelectorAll('[data-nav]')) a.toggleAttribute('aria-current', kind === 'board');
   if (!quiet) scrollTo(0, 0);
-  const early = peek(path) || (kind === 'bounty' && fromBoard(dec(parts[1] || '')));
+  const early = cache.get(path)?.data || (kind === 'bounty' && fromBoard(dec(parts[1] || '')));
   if (early) await paint(kind, early, parts, view);
   else if (!quiet) main.innerHTML = '<p class=note>Loading...</p>';
-  if (early && turn) {
-    window.__shotReady = true;
-    return;
+  if (!(early && turn)) {
+    try {
+      const data = await api(path);
+      if (seq !== gen) return;
+      if (data !== early) await paint(kind, data, parts, view);
+    } catch (e) {
+      if (seq !== gen) return;
+      fail(e, Boolean(early));
+    }
   }
-  try {
-    const data = await api(path);
-    if (seq !== gen) return;
-    if (data !== early) await paint(kind, data, parts, view);
-    window.__shotReady = true;
-  } catch (e) {
-    if (seq !== gen) return;
-    fail(e, Boolean(early));
-    window.__shotReady = true;
-  }
+  window.__shotReady = true;
 }
 
 function tick() {
@@ -91,11 +88,6 @@ function tick() {
   if (!document.hidden && current) route(true);
   clearTimeout(timer);
   timer = setTimeout(tick, 62000 - (Date.now() % 60000));
-}
-
-function peek(path) {
-  const hit = cache.get(path);
-  return hit ? hit.data : null;
 }
 
 function views() {
@@ -164,10 +156,6 @@ function dec(s) {
   try { return decodeURIComponent(s); } catch { return s; }
 }
 
-function minute() {
-  return Math.floor(Date.now() / 60000);
-}
-
 function hm() {
   return new Date().toISOString().slice(11, 16) + ' UTC';
 }
@@ -177,15 +165,13 @@ function stamp() {
   for (const el of document.querySelectorAll('.up')) el.textContent = hm();
 }
 
-function sleep(ms) {
-  return new Promise((ok) => setTimeout(ok, ms));
-}
-
 async function load(path, old, m) {
-  let r = await fetch(BASE + path, { cache: 'no-cache' });
+  const get = () => fetch(BASE + path, { cache: 'no-cache' });
+  let r = await get();
   if (r.status === 429) {
-    await sleep(1000 * Math.min(60, Number(r.headers.get('retry-after')) || 5));
-    r = await fetch(BASE + path, { cache: 'no-cache' });
+    const s = Math.min(60, Number(r.headers.get('retry-after')) || 5);
+    await new Promise((ok) => setTimeout(ok, s * 1000));
+    r = await get();
   }
   if (!r.ok) throw new Error(r.status === 404 ? 'not found' : 'HTTP ' + r.status);
   const etag = r.headers.get('etag');
@@ -199,16 +185,8 @@ async function load(path, old, m) {
 }
 
 function fromBoard(slug) {
-  const b = peek(ROUTES.board());
+  const b = cache.get(ROUTES.board())?.data;
   return b ? b.items.find((x) => x.slug === slug) || null : null;
-}
-
-function byDeadline(a, b) {
-  return Date.parse(a.deadline) - Date.parse(b.deadline);
-}
-
-function byOpening(a, b) {
-  return Date.parse(a.publishedAt) - Date.parse(b.publishedAt);
 }
 
 function head(k) {
@@ -238,7 +216,7 @@ function fail(e, keep) {
   const msg = e && e.message === 'not found' ? 'Not found on make.fun.' : 'Could not load from make.fun (' + esc(e && e.message) + ').';
   const note = '<p class=note data-k=err>' + msg + ' <a href="" data-retry>Retry</a></p>';
   if (keep) main.insertAdjacentHTML('afterbegin', note);
-  else { main.innerHTML = note; main.dataset.v = ''; }
+  else { main.innerHTML = note; main.dataset.v = ''; document.title = 'Error - Potboard (unofficial)'; }
 }
 
 addEventListener('hashchange', () => route());

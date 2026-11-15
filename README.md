@@ -10,7 +10,7 @@ Potboard is an **unofficial**, read-only frontend for [make.fun](https://make.fu
 make.fun. Every figure it shows comes from make.fun's public API, or is computed from it. It has no sign-in and
 sends no writes.
 
-![The board](screenshots/1-board.jpg)
+![The board beside a bounty page](screenshots/1-board-bounty.jpg)
 
 ## Routes
 
@@ -18,7 +18,7 @@ sends no writes.
 |---|---|---|
 | `#/` | Board: taking entries, opening soon, closed awaiting results | `GET /api/competitions?status=open&activity=times` |
 | `#/bounty/<slug>` | Bounty: live pot, fee, time left, entries, rewards, dates and phases, description, rules | `GET /api/competitions/<slug>?submissions=summary` |
-| `#/bounty/<slug>/leaderboard[/<page>]` | Leaderboard, 50 rows a page | `GET /api/competitions/<slug>/leaderboard?rows=first` |
+| `#/bounty/<slug>/leaderboard[/<page>]` | Leaderboard, 50 rows a page, with each place's prize and 90% interval | `GET /api/competitions/<slug>/leaderboard?rows=first` |
 | `#/u/<handle>` | Profile: record, solutions | `GET /api/profiles/<handle>` |
 
 ## How it works
@@ -30,6 +30,8 @@ sends no writes.
   text keeps the old object, so nothing re-renders.
 - Rendered blocks and board rows carry keys. A refresh replaces only the blocks whose HTML changed. A
   leaderboard page turn reuses the data already loaded (0 requests).
+- From 1,100 px wide, the bounty page shows the cached board beside it, with 0 extra requests; a deep link to a
+  bounty shows the bounty page alone, since the board is never fetched for it.
 - Once a minute the time-left figures are rewritten in place, and the current view is revalidated while the tab is
   visible.
 

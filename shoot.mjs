@@ -20,8 +20,13 @@ try {
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', (e) => errors.push(String(e)));
-    await page.goto(base + '/' + s.path);
-    await page.waitForFunction(() => window.__shotReady === true, null, { timeout: 45000 });
+    // With "via", open that route first, then move to the shot's route in the app, as a click would.
+    await page.goto(base + '/' + (s.via || s.path));
+    await page.waitForFunction(() => window.__shotReady === true, null, { timeout: 90000 });
+    if (s.via) {
+      await page.evaluate((p) => { window.__shotReady = false; location.hash = p; }, s.path);
+      await page.waitForFunction(() => window.__shotReady === true, null, { timeout: 90000 });
+    }
     // Wait only for images inside the viewport: complete (loaded) or broken.
     await page.waitForFunction(() => [...document.images]
       .filter((i) => { const r = i.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; })
@@ -34,7 +39,7 @@ try {
     }
     const size = statSync(file).size;
     if (size > LIMIT) throw new Error(s.file + ' is ' + size + ' B, over 256 KiB');
-    console.log(s.file, s.path, s.viewport.width + 'x' + s.viewport.height + '@' + s.dpr, size + ' B');
+    console.log(s.file, (s.via ? s.via + ' -> ' : '') + s.path, s.viewport.width + 'x' + s.viewport.height + '@' + s.dpr, size + ' B');
     await context.close();
   }
 } finally {

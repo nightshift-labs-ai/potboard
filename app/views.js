@@ -3,7 +3,7 @@ import { esc, money, left, chip, fee, link } from './app.js';
 function bounty(c) {
   const n = c.submissionCount || 0;
   const fees = Number(c.entryFeesUsd) > 0 ? '<small>incl. ' + money(c.entryFeesUsd)
-    + (c.entryFeePayers ? ' from ' + Number(c.entryFeePayers).toLocaleString('en-US') + ' fees' : ' fees') + '</small>' : '';
+    + (c.entryFeePayers ? ' from ' + Number(c.entryFeePayers).toLocaleString('en-US') + ' paid sign-ups' : ' in sign-up fees') + '</small>' : '';
   document.title = c.title + ' - Potboard (unofficial)';
   return `<div data-k=h><p class=crumb><a href="#/">Bounties</a> › ${esc(c.title)}</p>
 <h1>${esc(c.title)} ${chip(c, true)}</h1><p class="meta one" title="${esc(c.summary || '')}">${esc(c.summary || '')}</p>

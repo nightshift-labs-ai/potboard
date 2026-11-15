@@ -166,12 +166,7 @@ function tabs(slug, n, lb, e) {
 }
 
 function solHead(sol) {
-  const m = new Set(sol.map(solSlug)).size;
-  return sol.length + (sol.length === 1 ? ' solution in ' : ' solutions in ') + m + (m === 1 ? ' bounty' : ' bounties');
-}
-
-function solSlug(s) {
-  return (s.competition || {}).slug || '';
+  return sol.length + (sol.length === 1 ? ' solution' : ' solutions');
 }
 
 function inline(s) {

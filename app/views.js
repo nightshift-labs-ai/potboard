@@ -5,7 +5,8 @@ export function bounty(c) {
   const fees = Number(c.entryFeesUsd) > 0 ? '<small>incl. ' + money(c.entryFeesUsd) + ' fees</small>' : '';
   document.title = c.title + ' - Potboard (unofficial)';
   return `<div data-k=h><p class=crumb><a href="#/">Bounties</a> › ${esc(c.title)}</p>
-<h1>${esc(c.title)} ${chip(c)}</h1><p class=meta>${esc(c.summary || '')}</p>${tabs(c.slug, n, false)}</div>
+<h1>${esc(c.title)} ${chip(c)}</h1><p class="meta one" title="${esc(c.summary || '')}">${esc(c.summary || '')}</p>
+${tabs(c.slug, n, false)}</div>
 <div class=facts data-k=f><div><span class=lab>Live pot</span><b>${money(c.potUsd)}</b>${fees}</div>
 <div><span class=lab>Entry fee</span><b>${fee(c.entryFeeUsd)}</b></div>
 <div><span class=lab>Time left</span><b data-t=${esc(c.deadline)}>${left(c.deadline)}</b><small>${when(c.deadline)}</small></div>
@@ -202,7 +203,12 @@ function who(h) {
 const CSS = '.crumb{font-size:15px;margin:0 0 4px}'
   + '.facts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0}'
   + '.facts div,.tiles div{background:#fff;border:1px solid #d9dce3;border-radius:8px;padding:8px 12px}'
-  + '.facts div:first-child{background:#eef8f1}.facts b{display:block;font-size:36px;line-height:1.15}'
+  + '.facts div:first-child{background:#eef8f1}.facts div{padding:6px 10px}'
+  + '.facts b{display:block;font-size:36px;line-height:1.15;white-space:nowrap}.facts small{display:block;font-size:14px}'
+  + '.one{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:2px 0}'
+  + '@media(min-width:641px){.lb{table-layout:fixed}.lb td,.lb th{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+  + '.lb th:nth-child(1){width:72px}.lb th:nth-child(2){width:24%}.lb th:nth-child(4){width:150px}'
+  + '.lb th:nth-child(5){width:205px}.lb td:nth-child(5){font-size:15px}}'
   + '.lab{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:#4b5563;font-weight:700}'
   + '.two{display:grid;gap:16px}@media(min-width:760px){.two{grid-template-columns:1fr 1fr}}'
   + 'table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #d9dce3}'

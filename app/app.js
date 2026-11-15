@@ -58,15 +58,21 @@ async function route(quiet) {
   const parts = location.hash.slice(2).split('/');
   const kind = parts[0] === 'u' ? 'profile' : parts[0] !== 'bounty' ? 'board'
     : parts[2] === 'leaderboard' ? 'leaderboard' : 'bounty';
-  const arg = encodeURIComponent(decodeURIComponent(parts[1] || ''));
+  const arg = encodeURIComponent(dec(parts[1] || ''));
   const path = ROUTES[kind](arg);
   const view = kind + ':' + arg;
   const seq = ++gen;
+  const turn = !quiet && kind === 'leaderboard' && main.dataset.v === view;
   current = path;
   for (const a of document.querySelectorAll('[data-nav]')) a.toggleAttribute('aria-current', kind === 'board');
-  const early = peek(path) || (kind === 'bounty' && fromBoard(decodeURIComponent(parts[1] || '')));
+  if (!quiet) scrollTo(0, 0);
+  const early = peek(path) || (kind === 'bounty' && fromBoard(dec(parts[1] || '')));
   if (early) await paint(kind, early, parts, view);
   else if (!quiet) main.innerHTML = '<p class=note>Loading...</p>';
+  if (early && turn) {
+    window.__shotReady = true;
+    return;
+  }
   try {
     const data = await api(path);
     if (seq !== gen) return;
@@ -146,6 +152,10 @@ export const say = (n, w) => n.toLocaleString('en-US') + ' ' + w + (n === 1 ? ''
 
 function ent(c) {
   return '&#' + c.charCodeAt(0) + ';';
+}
+
+function dec(s) {
+  try { return decodeURIComponent(s); } catch { return s; }
 }
 
 function minute() {

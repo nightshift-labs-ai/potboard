@@ -40,12 +40,12 @@ export function profile(u) {
   const sol = u.solutions || [];
   document.title = (u.handle || 'Profile') + ' - Potboard (unofficial)';
   return `<div data-k=h><p class=crumb><a href="#/">Bounties</a> › Profile</p>
-<h1><img class=av alt="" crossorigin=anonymous src="${esc(avatar(u))}">${esc(u.name || u.handle)}</h1>
+<h1><img class=av alt="" crossorigin=anonymous src="${esc(avatar(u))}">${esc(u.display_name || u.handle)}</h1>
 <p class=meta>@${esc(u.handle)}</p></div>
 <div class=tiles data-k=t>${tile('Entered', r.competitions_entered)}${tile('Placed', r.competitions_placed)}
 ${tile('Won', r.competitions_won)}${tile('Best place', r.best_placement)}${tile('Prize USD', money(r.prize_usd))}</div>
 <div data-k=s><h2>Solutions (${sol.length})</h2><table><thead><tr><th>Bounty</th><th>Title</th><th class=num>Score</th>
-<th>Received</th></tr></thead><tbody>${sol.slice(0, 20).map(solRow).join('')}</tbody></table>
+<th>Entered</th></tr></thead><tbody>${sol.slice(0, 20).map(solRow).join('')}</tbody></table>
 ${sol.length > 20 ? '<p class=meta>Showing the first 20 of ' + sol.length + '.</p>' : ''}</div>`;
 }
 
@@ -124,7 +124,7 @@ function solRow(s) {
   const sc = s.score || {};
   return '<tr><td data-l=Bounty><a href="' + link(c.slug || '') + '">' + esc(c.title || c.slug) + '</a></td><td data-l=Title>'
     + esc(s.title || '') + '</td><td class=num data-l=Score>' + score(sc.column && sc.column.source, sc.value, sc.display)
-    + '</td><td data-l=Received>' + when(s.received_at || s.createdAt) + '</td></tr>';
+    + '</td><td data-l=Entered>' + when(s.entered_at || s.received_at) + '</td></tr>';
 }
 
 function tile(label, v) {

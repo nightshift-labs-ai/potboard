@@ -2,7 +2,8 @@ import { esc, money, left, chip, fee, link } from './app.js';
 
 function bounty(c) {
   const n = c.submissionCount || 0;
-  const fees = Number(c.entryFeesUsd) > 0 ? '<small>incl. ' + money(c.entryFeesUsd) + ' fees</small>' : '';
+  const fees = Number(c.entryFeesUsd) > 0 ? '<small>incl. ' + money(c.entryFeesUsd)
+    + (c.entryFeePayers ? ' from ' + Number(c.entryFeePayers).toLocaleString('en-US') + ' fees' : ' fees') + '</small>' : '';
   document.title = c.title + ' - Potboard (unofficial)';
   return `<div data-k=h><p class=crumb><a href="#/">Bounties</a> › ${esc(c.title)}</p>
 <h1>${esc(c.title)} ${chip(c, true)}</h1><p class="meta one" title="${esc(c.summary || '')}">${esc(c.summary || '')}</p>
@@ -12,7 +13,8 @@ ${tabs(c.slug, n, false)}</div>
 <div><span class=lab>Time left</span><b data-t=${esc(c.deadline)}>${left(c.deadline)}</b><small>${when(c.deadline, MINZ)}</small></div>
 <div><span class=lab>Entries</span><b>${n.toLocaleString('en-US')}</b></div></div>
 <div class=two data-k=two><section>${rewards(c)}</section><section>${dates(c)}
-<p><a class=btn href="${link(c.slug)}/leaderboard">Full leaderboard</a></p></section></div>
+<p><a class=btn href="${link(c.slug)}/leaderboard">Full leaderboard</a>
+<a class=btn href="https://make.fun/bounty/${encodeURIComponent(c.slug)}" target=_blank rel=noopener>Enter on make.fun ↗</a></p></section></div>
 <div data-k=md>${c.description ? '<h2>Description</h2><div class=md>' + md(c.description) + '</div>' : ''}
 ${c.rules ? '<h2>Rules</h2><div class=md>' + md(c.rules) + '</div>' : '<p class=note>Loading rules...</p>'}</div>`;
 }
@@ -29,7 +31,7 @@ function leaderboard(d, page = 1, item) { // 50 rows a page
   const pg = pager(p, pages, all.length, slug, ph);
   document.title = 'Leaderboard: ' + title + ' - Potboard (unofficial)';
   return `<div data-k=h><p class=crumb><a href="#/">Bounties</a> › <a href="${link(slug)}">${esc(title)}</a></p>
-<h1>${esc(title)}</h1>${tabs(slug, all.length, true)}</div>
+<h1>${esc(title)}</h1>${tabs(slug, all.length, true, item && item.submissionCount)}</div>
 ${pg}
 <table class=lb data-k=p${p}><thead><tr><th class=num>#</th><th>Entrant</th>
 <th class=num>${esc(col.title)}${micro(col.source) ? '<small>90% interval</small>' : ''}</th><th class=num>Prize</th></tr></thead>
@@ -46,7 +48,7 @@ function profile(u) {
 <h1>${esc(u.display_name || u.handle)}</h1><p class=meta>@${esc(u.handle)}${joined(u.joined_at)}</p></div></div></div>
 <div class=tiles data-k=t>${tile('Entered', r.competitions_entered)}${tile('Placed', r.competitions_placed)}
 ${tile('Won', r.competitions_won)}${tile('Best place', r.best_placement)}${tile('Prizes', money(r.prize_usd))}</div>
-<div data-k=s class=pf><h2>Solutions (${sol.length}), best place first</h2><table class=sol><thead><tr><th>Place</th>
+<div data-k=s class=pf><h2>${solHead(sol)}, best place first</h2><table class=sol><thead><tr><th>Place</th>
 <th>Bounty / solution</th><th class=num>Score</th><th class=num>Prize</th></tr></thead><tbody>${sol.slice(0, 20).map(solRow).join('')}</tbody></table>
 ${sol.length > 20 ? '<p class=meta>Showing the first 20 of ' + sol.length + '.</p>' : ''}</div>`;
 }
@@ -155,10 +157,21 @@ function place(n) {
   return Number(n) + s;
 }
 
-function tabs(slug, n, lb) {
+function tabs(slug, n, lb, e) {
   const cur = ' aria-current=page';
+  const tail = e ? ' of ' + Number(e).toLocaleString('en-US') + ' entries' : '';
   return '<nav class=tabs><a href="' + link(slug) + '"' + (lb ? '' : cur) + '>Overview</a><a href="' + link(slug)
-    + '/leaderboard"' + (lb ? cur + '>Leaderboard (' + Number(n).toLocaleString('en-US') + ' ranked)' : '>Leaderboard') + '</a></nav>';
+    + '/leaderboard"' + (lb ? cur + '>Leaderboard (' + Number(n).toLocaleString('en-US') + ' ranked' + tail + ')' : '>Leaderboard')
+    + '</a></nav>';
+}
+
+function solHead(sol) {
+  const m = new Set(sol.map(solSlug)).size;
+  return sol.length + (sol.length === 1 ? ' solution in ' : ' solutions in ') + m + (m === 1 ? ' bounty' : ' bounties');
+}
+
+function solSlug(s) {
+  return (s.competition || {}).slug || '';
 }
 
 function inline(s) {

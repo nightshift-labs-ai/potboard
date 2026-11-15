@@ -1,11 +1,11 @@
-const ROUTES = { // #/ #/bounty/:s #/bounty/:s/leaderboard/:p #/u/:h
+const ROUTES = { // 1 endpoint a view
   board: () => '/competitions?status=open&activity=times',
   bounty: (s) => '/competitions/' + s + '?submissions=summary',
   leaderboard: (s) => '/competitions/' + s + '/leaderboard?rows=first',
   profile: (h) => '/profiles/' + h,
 };
 
-async function api(path) { // Map cache + ETag revalidation; 1 JSON endpoint a view
+async function api(path) { // Map cache + ETag revalidation + in-flight dedupe
   const old = cache.get(path);
   const m = Math.floor(Date.now() / 60000);
   if (old && old.minute === m) return old.data;
@@ -15,7 +15,7 @@ async function api(path) { // Map cache + ETag revalidation; 1 JSON endpoint a v
   try { return await p; } finally { inflight.delete(path); }
 }
 
-function board(data) { // keyed rows, patched in place
+function board(data) { // keyed rows patched in place: pot, fee, time left, entries
   const now = Date.now();
   const open = [];
   const soon = [];
@@ -130,7 +130,7 @@ export function money(v) {
 }
 
 export function left(iso) {
-  const ms = Date.parse(iso) - Date.now();
+  const ms = Date.parse(iso) - Math.floor(Date.now() / 60000) * 60000;
   if (!(ms > 0)) return 'Closed';
   const h = Math.floor(ms / 3600000);
   const m = Math.floor(ms / 60000) % 60;
@@ -206,15 +206,11 @@ function head(k) {
     + '<span>Time left</span><span>Entries</span></div>';
 }
 
-function incl(b) {
-  return Number(b.entryFeesUsd) > 0 ? '<small>incl. ' + money(b.entryFeesUsd) + ' fees</small>' : '';
-}
-
 function row(b) {
   const places = b.rewardsNow ? b.rewardsNow.length : 0;
   return `<a class=row data-k=${esc(b.slug)} href="${link(b.slug)}"><div><span class=t>${esc(b.title)}</span>
 <br><small>${esc(b.category)} · ${esc(b.sponsor && b.sponsor.name)} · ${say(places, 'place')}</small></div>
-<b data-l="Live pot">${money(b.potUsd)}${incl(b)}</b><b data-l="Entry fee">${fee(b.entryFeeUsd)}</b>
+<b data-l="Live pot">${money(b.potUsd)}</b><b data-l="Entry fee">${fee(b.entryFeeUsd)}</b>
 <b data-l="Time left">${chip(b)}</b><b data-l=Entries>${(b.submissionCount || 0).toLocaleString('en-US')}</b></a>`;
 }
 

@@ -1,4 +1,4 @@
-import { esc, money, left, chip, fee, link, say } from './app.js';
+import { esc, money, left, chip, fee, link } from './app.js';
 
 export function bounty(c) {
   const n = c.submissionCount || 0;
@@ -9,10 +9,10 @@ export function bounty(c) {
 ${tabs(c.slug, n, false)}</div>
 <div class=facts data-k=f><div><span class=lab>Live pot</span><b>${money(c.potUsd)}</b>${fees}</div>
 <div><span class=lab>Entry fee</span><b>${fee(c.entryFeeUsd)}</b></div>
-<div><span class=lab>Time left</span><b data-t=${esc(c.deadline)}>${left(c.deadline)}</b><small>${when(c.deadline)}</small></div>
+<div><span class=lab>Time left</span><b data-t=${esc(c.deadline)}>${left(c.deadline)}</b><small>${when(c.deadline, MINZ)}</small></div>
 <div><span class=lab>Entries</span><b>${n.toLocaleString('en-US')}</b></div></div>
 <div class=two data-k=two><section>${rewards(c)}</section><section>${dates(c)}
-<p><a class=btn href="${link(c.slug)}/leaderboard">Leaderboard (${say(n, 'entry').replace('entrys', 'entries')})</a></p></section></div>
+<p><a class=btn href="${link(c.slug)}/leaderboard">Full leaderboard</a></p></section></div>
 <div data-k=md>${c.description ? '<h2>Description</h2><div class=md>' + md(c.description) + '</div>' : ''}
 ${c.rules ? '<h2>Rules</h2><div class=md>' + md(c.rules) + '</div>' : '<p class=note>Loading rules...</p>'}</div>`;
 }
@@ -61,28 +61,31 @@ export function pager(p, n, t, s) {
 
 export function rewards(c) {
   const list = c.rewardsNow || [];
+  const top = Number(list[0] && list[0].amountUsd) || 1;
   let rows = '';
   for (let i = 0; i < list.length; i++) {
     let j = i;
     while (j + 1 < list.length && list[j + 1].amountUsd === list[i].amountUsd) j++;
     const x = list[i];
-    const each = j > i ? ' each' : '';
+    const w = Math.round((100 * Number(x.amountUsd)) / top);
     rows += '<tr><td data-l=Place>' + place(x.place) + (j > i ? '-' + place(list[j].place) : '') + '</td><td class=num data-l=Base>'
-      + money(x.baseUsd) + each + '</td><td class=num data-l="Fee share">' + money(x.feeShareUsd) + each
-      + '</td><td class=num data-l=Amount><b>' + money(x.amountUsd) + each + '</b></td></tr>';
+      + money(x.baseUsd) + '</td><td class=num data-l="Fee share">+' + money(x.feeShareUsd)
+      + '</td><td class="num bar" data-l=Amount style="--w:' + w + '%"><b>' + money(x.amountUsd) + '</b>'
+      + (j > i ? ' each' : '') + '</td></tr>';
     i = j;
   }
-  return '<h2>Rewards</h2><table><thead><tr><th>Place</th><th class=num>Base</th><th class=num>Fee share</th>'
+  return '<h2>Rewards</h2><table class=rw><thead><tr><th>Place</th><th class=num>Base</th><th class=num>Fee share</th>'
     + '<th class=num>Amount</th></tr></thead><tbody>' + rows + '<tr><td colspan=3><b>Total live pot</b></td>'
     + '<td class=num><b>' + money(c.potUsd) + '</b></td></tr></tbody></table>';
 }
 
 export function dates(c) {
-  let li = '<li>Opens: ' + when(c.opensAt || c.publishedAt) + '</li><li>Deadline: ' + when(c.deadline) + '</li>';
-  for (const ph of c.phases || []) {
-    li += '<li><b>' + esc(ph.title) + '</b>: ' + when(ph.startsAt) + ' to ' + when(ph.endsAt) + '</li>';
-  }
-  return '<h2>Dates and phases</h2><ul>' + li + '</ul>';
+  const ph = c.phases || [];
+  const at = c.opensAt || c.publishedAt;
+  let li = '';
+  for (const x of ph) li += '<li><b>' + esc(x.title) + '</b> ' + when(x.startsAt, MIN) + ' - ' + when(x.endsAt, MINZ) + '</li>';
+  return '<h2>Dates</h2><div class=dl>' + cell(Date.parse(at) > Date.now() ? 'Opens' : 'Opened', at)
+    + cell('Deadline', c.deadline) + cell('Results by', ph.length ? ph[ph.length - 1].endsAt : '') + '</div><ul class=ph>' + li + '</ul>';
 }
 
 const merged = new WeakMap();
@@ -145,7 +148,7 @@ function place(n) {
 function tabs(slug, n, lb) {
   const cur = ' aria-current=page';
   return '<nav class=tabs><a href="' + link(slug) + '"' + (lb ? '' : cur) + '>Overview</a><a href="' + link(slug)
-    + '/leaderboard"' + (lb ? cur : '') + '>Leaderboard (' + Number(n).toLocaleString('en-US') + ')</a></nav>';
+    + '/leaderboard"' + (lb ? cur + '>Leaderboard (' + Number(n).toLocaleString('en-US') + ' ranked)' : '>Leaderboard') + '</a></nav>';
 }
 
 function inline(s) {
@@ -189,21 +192,30 @@ function md(src) {
   return out + (open ? '</details>' : '');
 }
 
-function when(iso) {
+function when(iso, o) {
   if (!iso) return '-';
   const t = Date.parse(iso);
   if (!(t > 0)) return esc(iso);
-  return '<time datetime=' + esc(iso) + '>' + new Date(t).toISOString().slice(0, 16).replace('T', ' ') + ' UTC</time>';
+  const s = o ? new Date(t).toLocaleString('en-GB', o) : new Date(t).toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
+  return '<time datetime=' + esc(iso) + '>' + s + '</time>';
 }
 
 function who(h) {
   return '<a href="#/u/' + encodeURIComponent(h) + '">' + esc(h) + '</a>';
 }
 
+function cell(label, iso) {
+  return '<div><span class=lab>' + label + '</span><br>' + when(iso, MINZ) + '</div>';
+}
+
+const DAY = { timeZone: 'UTC', day: 'numeric', month: 'short' };
+const MIN = { ...DAY, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' };
+const MINZ = { ...MIN, timeZoneName: 'short' };
+
 const CSS = '.crumb{font-size:15px;margin:0 0 4px}'
-  + '.facts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0}'
+  + '.facts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:6px 0}'
   + '.facts div,.tiles div{background:#fff;border:1px solid #d9dce3;border-radius:8px;padding:8px 12px}'
-  + '.facts div:first-child{background:#eef8f1}.facts div{padding:6px 10px}'
+  + '.facts div:first-child{background:#eef8f1}.facts div{padding:3px 10px}'
   + '.facts b{display:block;font-size:36px;line-height:1.15;white-space:nowrap}.facts small{display:block;font-size:14px}'
   + '.one{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:2px 0}'
   + '@media(min-width:641px){.lb{table-layout:fixed}.lb td,.lb th{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
@@ -212,9 +224,9 @@ const CSS = '.crumb{font-size:15px;margin:0 0 4px}'
   + '.lab{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:#4b5563;font-weight:700}'
   + '.two{display:grid;gap:16px}@media(min-width:760px){.two{grid-template-columns:1fr 1fr}}'
   + 'table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #d9dce3}'
-  + 'th,td{padding:5px 10px;text-align:left}th{font-size:13px;text-transform:uppercase;color:#4b5563}'
+  + 'th,td{padding:2px 10px;text-align:left}th{font-size:13px;text-transform:uppercase;color:#4b5563}'
   + 'tbody tr:nth-child(even){background:#f4f5f7}.num{text-align:right}'
-  + '.tabs{display:flex;gap:16px;border-bottom:1px solid #d9dce3;margin:8px 0;font-size:17px}'
+  + '.tabs{display:flex;gap:16px;border-bottom:1px solid #d9dce3;margin:2px 0;font-size:17px}'
   + '.tabs a{padding:6px 2px;text-decoration:none}'
   + '.tabs [aria-current]{border-bottom:3px solid #3b2bd1;font-weight:700;color:#14171c}'
   + '.lb td,.lb th{font-size:18px;height:32px;padding:2px 10px}.lb th{font-size:15px}'
@@ -223,6 +235,20 @@ const CSS = '.crumb{font-size:15px;margin:0 0 4px}'
   + '.av{width:64px;height:64px;border-radius:50%;vertical-align:middle;margin-right:10px;background:#eceef2}'
   + '.md{background:#fff;border:1px solid #d9dce3;border-radius:8px;padding:6px 16px;overflow-wrap:anywhere}'
   + 'code{background:#f4f5f7;padding:0 4px;border-radius:4px}'
+  + '.two h2,.sp aside h2{font-size:20px;margin:10px 0 4px}'
+  + '@media(min-width:641px){.rw th,.rw td{white-space:nowrap}}'
+  + '.bar{background:linear-gradient(90deg,#dcd7ff var(--w),transparent 0)}'
+  + '.dl{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.dl div{background:#fff;border:1px solid #d9dce3;'
+  + 'border-radius:8px;padding:3px 10px}.ph{margin:6px 0;padding-left:20px}'
+  + '.sp{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:0 20px}'
+  + '.sp header,.sp footer{grid-column:1/-1}.sp main{margin:0;max-width:none;padding-left:0}'
+  + '.sp aside{padding:14px 0 20px 20px}.sp .two{grid-template-columns:1fr}'
+  + '.sp aside .hd,.sp aside .row{grid-template-columns:1fr 110px 56px 84px 58px;gap:8px;padding:4px 8px}'
+  + '.sp aside .row{min-height:44px}.sp aside .t{font-size:16px}.sp aside .row>b{font-size:19px}'
+  + '.sp aside .hd{font-size:11.5px}.sp aside .chip{font-size:13px;white-space:normal}.sp aside b small{font-size:12px;white-space:nowrap}.sp aside .row>div{min-width:0}'
+  + '.sp aside .t,.sp aside div>small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+  + '.sp aside br{display:none}.sp aside .row[aria-current]{background:#fff3c4;box-shadow:inset 5px 0 #3b2bd1}'
+  + '.sp .facts b{font-size:30px}.sp h1{font-size:26px}'
   + '@media(max-width:640px){.facts,.tiles{grid-template-columns:1fr 1fr}.facts b{font-size:26px}'
   + 'table,tbody,tr,td{display:block}thead{display:none}tr{border-bottom:1px solid #d9dce3;padding:4px 0}'
   + 'td::before{content:attr(data-l) ": ";color:#4b5563;font-size:13px;text-transform:uppercase}'

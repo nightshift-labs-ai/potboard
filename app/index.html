@@ -6,7 +6,7 @@
 <title>Potboard - unofficial make.fun bounty board</title>
 <style>
 *{box-sizing:border-box}
-body{margin:0;background:#fbfaf7;color:#14171c;font:16px/1.45 system-ui,sans-serif;font-variant-numeric:tabular-nums}
+body{margin:0;background:#fbfaf7;color:#14171c;font:16px/1.45 -apple-system,'Segoe UI','Ubuntu Sans',Ubuntu,sans-serif;font-variant-numeric:tabular-nums}
 a{color:#3b2bd1}
 :focus-visible{outline:3px solid #3b2bd1;outline-offset:2px}
 header{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;padding:8px 20px;background:#fff;border-bottom:1px solid #d9dce3;font-size:15px}
@@ -30,6 +30,7 @@ h1{font-size:28px;margin:4px 0}h2{font-size:22px;margin:18px 0 8px}
 .row .t{font-size:18px;font-weight:650;color:#3b2bd1}
 .row>b{font-size:24px;font-weight:700}
 .row>b:first-of-type{background:#eef8f1;border-radius:6px;padding:0 6px}
+.row>b small{display:block;font-size:13px;font-weight:400}
 .chip{display:inline-block;font-size:14px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ddf3e4;color:#0e5a2e;white-space:nowrap}
 .c24{background:#fde7b0;color:#5c3d00}.c1{background:#fddcdc;color:#8f1d1d}.cx{background:#eceef2;color:#3f4753}.cs{background:#dbeafe;color:#1e3a8a}
 .note{background:#fff;border:1px solid #d9dce3;border-radius:8px;padding:12px 14px}
@@ -54,6 +55,7 @@ a,button{min-height:44px}header nav a,header form{display:flex;align-items:cente
 <span class=stamp></span>
 <a href="https://make.fun" rel=noopener>make.fun</a>
 </header>
+<aside></aside>
 <main></main>
 <footer>Potboard is an unofficial make.fun frontend built by an AI agent (Nightshift Labs). It is read-only and shows data from make.fun's public API. It is not affiliated with or endorsed by make.fun.</footer>
 </body>

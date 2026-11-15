@@ -32,7 +32,7 @@ function board(data) { // keyed rows, patched in place
   for (const b of open) { pot += Number(b.potUsd) || 0; n += b.submissionCount || 0; }
   document.title = 'Bounties - Potboard (unofficial make.fun frontend)';
   return `<p class=strip data-k=strip><b>${open.length}</b> taking entries · <b>${money(pot)}</b>
- in live pots · <b>${n.toLocaleString('en-US')}</b> entries · updated <span class=up>${hm()}</span></p>
+ in live pots · <b>${n.toLocaleString('en-US')}</b> entries</p>
 <h2 data-k=h1>Taking entries (${open.length})</h2>${head('h1')}${open.map(row).join('')}
 <h2 data-k=h2>Opening soon (${soon.length})</h2>${head('h2')}${soon.map(row).join('')}
 <details data-k=x><summary>Closed, awaiting results (${shut.length})</summary>
@@ -66,19 +66,23 @@ async function route(quiet) {
   current = path;
   for (const a of document.querySelectorAll('[data-nav]')) a.toggleAttribute('aria-current', kind === 'board');
   if (!quiet) scrollTo(0, 0);
+  if (kind !== 'bounty') side();
   const early = cache.get(path)?.data || (kind === 'bounty' && fromBoard(dec(parts[1] || '')));
   if (early) await paint(kind, early, parts, view);
   else if (!quiet) main.innerHTML = '<p class=note>Loading...</p>';
+  let data = early;
   if (!(early && turn)) {
     try {
-      const data = await api(path);
+      data = await api(path);
       if (seq !== gen) return;
       if (data !== early) await paint(kind, data, parts, view);
     } catch (e) {
       if (seq !== gen) return;
       fail(e, Boolean(early));
+      data = 0;
     }
   }
+  side(kind === 'bounty' && data);
   window.__shotReady = true;
 }
 
@@ -94,11 +98,24 @@ function views() {
   return import('./views.js');
 }
 
+function side(d) {
+  const b = d && innerWidth >= 1100 && cache.get(ROUTES.board())?.data;
+  document.body.classList.toggle('sp', Boolean(b));
+  if (!b) return aside.replaceChildren();
+  const i = b.items.findIndex((x) => x.slug === d.slug);
+  if (i >= 0) b.items[i] = d;
+  const t = document.title;
+  patch(aside, board(b), 'board');
+  document.title = t;
+  for (const a of aside.querySelectorAll('.row')) if (a.dataset.k === d.slug) a.setAttribute('aria-current', 'page');
+}
+
 const cache = new Map();
 const inflight = new Map();
 const BASE = 'https://make.fun/api';
 const T = document.createElement('template');
 const main = document.querySelector('main');
+const aside = document.querySelector('aside');
 let gen = 0;
 let current = '';
 let timer = 0;
@@ -135,7 +152,7 @@ export function chip(c, long) {
 }
 
 export function fee(v) {
-  return v == null || Number(v) === 0 ? 'No fee' : money(v);
+  return v == null || Number(v) === 0 ? 'Free' : money(v);
 }
 
 export function link(slug) {
@@ -162,7 +179,6 @@ function hm() {
 
 function stamp() {
   document.querySelector('.stamp').textContent = 'updated ' + hm();
-  for (const el of document.querySelectorAll('.up')) el.textContent = hm();
 }
 
 async function load(path, old, m) {
@@ -194,11 +210,15 @@ function head(k) {
     + '<span>Time left</span><span>Entries</span></div>';
 }
 
+function incl(b) {
+  return Number(b.entryFeesUsd) > 0 ? '<small>incl. ' + money(b.entryFeesUsd) + ' fees</small>' : '';
+}
+
 function row(b) {
   const places = b.rewardsNow ? b.rewardsNow.length : 0;
   return `<a class=row data-k=${esc(b.slug)} href="${link(b.slug)}"><div><span class=t>${esc(b.title)}</span>
 <br><small>${esc(b.category)} · ${esc(b.sponsor && b.sponsor.name)} · ${say(places, 'place')}</small></div>
-<b data-l="Live pot">${money(b.potUsd)}</b><b data-l="Entry fee">${fee(b.entryFeeUsd)}</b>
+<b data-l="Live pot">${money(b.potUsd)}${incl(b)}</b><b data-l="Entry fee">${fee(b.entryFeeUsd)}</b>
 <b data-l="Time left">${chip(b)}</b><b data-l=Entries>${(b.submissionCount || 0).toLocaleString('en-US')}</b></a>`;
 }
 

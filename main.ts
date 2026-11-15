@@ -13,13 +13,24 @@
 // Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:
 //   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 
-import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildDossier } from './vendor/makefun-frontend.ts';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 const out = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
+
+// Refuse to build unless screenshots/ holds exactly 3 images, counted as the gate counts them:
+// regular files only, names starting with '.' skipped.
+const shotDir = join(here, 'screenshots');
+const shots = existsSync(shotDir)
+  ? readdirSync(shotDir, { withFileTypes: true }).filter((e) => e.isFile() && !e.name.startsWith('.'))
+  : [];
+if (shots.length !== 3) {
+  process.stderr.write(`main.ts: screenshots/ must hold exactly 3 images, found ${shots.length}\n`);
+  process.exit(1);
+}
 
 mkdirSync(out, { recursive: true });
 cpSync(join(here, 'app'), join(out, 'app'), { recursive: true });

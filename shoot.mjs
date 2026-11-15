@@ -32,6 +32,15 @@ try {
       .filter((i) => { const r = i.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; })
       .every((i) => i.complete), null, { timeout: 20000 });
     if (errors.length) throw new Error(s.file + ': page errors: ' + errors.join(' | '));
+    // On the cover, the highlighted board row and the facts band must show the same pot and entries.
+    const agree = await page.evaluate(() => {
+      const r = document.querySelector('aside .row[aria-current]');
+      if (!r) return true;
+      const facts = [...document.querySelectorAll('.facts b')].map((b) => b.firstChild.textContent);
+      const row = [...r.querySelectorAll(':scope > b')].map((b) => b.firstChild.textContent);
+      return row[0] === facts[0] && row[3] === facts[3];
+    });
+    if (!agree) throw new Error(s.file + ': the highlighted row and the facts band differ; retake');
     const file = join(here, 'screenshots', s.file);
     for (const quality of [85, 80]) {
       await page.screenshot({ path: file, type: 'jpeg', quality });

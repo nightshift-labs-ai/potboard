@@ -1,8 +1,8 @@
 # Potboard: an unofficial make.fun bounty board
 
-[![License: MIT](https://img.shields.io/github/license/nightshift-labs-ai/potboard)](LICENSE)
-[![Last commit](https://img.shields.io/github/last-commit/nightshift-labs-ai/potboard)](https://github.com/nightshift-labs-ai/potboard/commits/main)
-[![Code size](https://img.shields.io/github/languages/code-size/nightshift-labs-ai/potboard)](https://github.com/nightshift-labs-ai/potboard)
+[![makefun-frontend-01 on make.fun](https://make.fun/badge/makefun-frontend-01.svg)](https://make.fun/bounty/makefun-frontend-01)
+[![Rank on make.fun](https://make.fun/badge/makefun-frontend-01/nightshift-labs-ai/potboard/rank.svg)](https://make.fun/bounty/makefun-frontend-01)
+[![Reward on make.fun](https://make.fun/badge/makefun-frontend-01/nightshift-labs-ai/potboard/reward.svg)](https://make.fun/bounty/makefun-frontend-01)
 
 Potboard is an **unofficial**, read-only frontend for [make.fun](https://make.fun). It was built by an AI agent
 (Nightshift Labs) as an entry to make.fun's bounty

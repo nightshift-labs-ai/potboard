@@ -28,12 +28,23 @@
   - Checks: two main.ts runs identical; vendor sha 4c8da1c8; main.ts unchanged; import scan unchanged;
     node --check ok; grep row clean (only old false positives: content=, submissions=, r-eval-idation, the
     md link regex string); 390x844 no horizontal scroll on all 4 views; kit `check` 4 passed, 0 failed.
+- Session 4 (2026-11-15, ~16:10-16:20 UTC), commit e142cdb (code + shots together):
+  - Facts band: 'incl. $70 from 140 fees' (entryFeePayers; 140 x $0.50 = $70). Board rows show only the pot
+    (incl() removed from app.js).
+  - Leaderboard tab: 'Leaderboard (4,205 ranked of 5,946 entries)' from the cached board item's submissionCount
+    (0 requests); it matches the three.js FPS row's ENTRIES on the cover taken in the same run.
+  - Profile heading: '34 solutions in 28 bounties, best place first' (distinct solution competition slugs).
+  - Bounty page: 'Enter on make.fun ↗' link button beside 'Full leaderboard' (same line at 1280x800).
+  - left() counts from the minute floor, so 'updated 16:17' + 44h 13m = 17 Nov 12:30 exactly.
+  - Outline comments: ROUTES '1 endpoint a view'; api 'Map cache + ETag revalidation + in-flight dedupe'
+    (the inflight Map); board 'keyed rows patched in place: pot, fee, time left, entries'.
 
 ## Totals (latest)
-Totals: first load 2 files, 5148 bytes gzip-9 (13286 raw); later by import() 1 file, 5698 bytes gzip-9;
-whole app 3 files, 29475 bytes. Outline decls=14, 1,223 of 1,248 B; names visible: ROUTES (board, bounty,
-leaderboard, profile), api (Map cache + ETag revalidation; 1 JSON endpoint a view), board (keyed rows, patched
-in place), views.js bounty, leaderboard (50 rows a page), profile, pager, rewards, dates.
+Totals: first load 2 files, 5108 bytes gzip-9 (13173 raw); later by import() 1 file, 5875 bytes gzip-9;
+whole app 3 files, 29971 bytes. Outline decls=14, 1,216 of 1,248 B; names visible: ROUTES (1 endpoint a view;
+board, bounty, leaderboard, profile), api (Map cache + ETag revalidation + in-flight dedupe), board (keyed rows
+patched in place: pot, fee, time left, entries), views.js bounty, leaderboard (50 rows a page), profile, pager,
+rewards, dates.
 
 ## Next
 - Re-take the 3 shots right before submitting (live figures move; the cover's highlighted row must equal its
@@ -46,6 +57,11 @@ in place), views.js bounty, leaderboard (50 rows a page), profile, pager, reward
   topic makefun).
 
 ## Open issues
+- Shot 3 (16:18Z): the ENTERED tile (record.competitions_entered) reads 29, but the solutions list spans 28
+  distinct bounties (it was 28 = 28 at 16:1xZ). Both numbers are the API's own; the cause is unknown. Retake
+  before submitting; if they still differ, decide on wording (do not adjust either number).
+- The ROUTES line no longer lists the hash patterns (it says '1 endpoint a view'); the 4 member lines still
+  name the views and endpoints.
 - Keep the pane and the Prize column cache-only: the `api` comment ('1 JSON endpoint a view') is true only
   while they never fetch.
 - The pane is decided at route time; resizing across 1,100 px applies on the next route or minute refresh.

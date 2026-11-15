@@ -184,11 +184,7 @@ function stamp() {
 async function load(path, old, m) {
   const get = () => fetch(BASE + path, { cache: 'no-cache' });
   let r = await get();
-  if (r.status === 429) {
-    const s = Math.min(60, Number(r.headers.get('retry-after')) || 5);
-    await new Promise((ok) => setTimeout(ok, s * 1000));
-    r = await get();
-  }
+  if (r.status === 429) r = await (await views()).later(r, get);
   if (!r.ok) throw new Error(r.status === 404 ? 'not found' : 'HTTP ' + r.status);
   const etag = r.headers.get('etag');
   if (old && etag && old.etag === etag) { old.minute = m; return old.data; }

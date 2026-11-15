@@ -289,6 +289,13 @@ const CSS = '.crumb{font-size:15px;margin:0 0 4px}'
 
 document.head.insertAdjacentHTML('beforeend', '<style>' + CSS + '</style>');
 
+// On HTTP 429: wait for Retry-After (5 s if absent, 60 s at most), then ask once more.
+export async function later(r, get) {
+  const s = Math.min(60, Number(r.headers.get('retry-after')) || 5);
+  await new Promise((ok) => setTimeout(ok, s * 1000));
+  return get();
+}
+
 // The board's later pages, fetched only when the first page names a next_cursor (at most 5 more).
 export async function more(data, url) {
   const items = data.items.slice();

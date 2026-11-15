@@ -1,4 +1,4 @@
-const ROUTES = { // #/  #/bounty/:slug  #/bounty/:slug/leaderboard/:page  #/u/:handle
+const ROUTES = { // #/ #/bounty/:s #/bounty/:s/leaderboard/:p #/u/:h
   board: () => '/competitions?status=open&activity=times',
   bounty: (s) => '/competitions/' + s + '?submissions=summary',
   leaderboard: (s) => '/competitions/' + s + '/leaderboard?rows=first',

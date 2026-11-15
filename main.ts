@@ -44,3 +44,7 @@ writeFileSync(
   join(out, 'dossier.json'),
   buildDossier(out, { text_max_bytes: 163840, screenshots: { max: 3, max_bytes: 262144 }, app_max_files: 993, app_max_bytes: 16777216 }),
 );
+
+// One-line summary of what was handed in (deterministic: no clock, no network).
+const appFiles = readdirSync(join(out, 'app'), { recursive: true, withFileTypes: true }).filter((e) => e.isFile()).length;
+process.stdout.write(`main.ts: wrote ${join(out, 'dossier.json')} with ${appFiles} app files and ${shots.length} screenshots\n`);

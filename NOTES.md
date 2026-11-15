@@ -47,10 +47,18 @@
   - Shots 16:58-16:59Z, back to back, cover guard passed: facts band '$576 incl. $76 from 152 fees'
     (152 x $0.50) = highlighted row ($576, 91 entries); shot 2 'Leaderboard (4,205 ranked of 6,073 entries)'
     = cover three.js FPS row 6,073; shot 3 '37 solutions, best place first', Entered 29.
+- Session 6 (2026-11-15, ~17:05-17:12 UTC), commit 197d6b7 + shots:
+  - Facts band pot tile: 'incl. $X from N paid sign-ups' (entryFeePayers = paid sign-ups, which can exceed
+    entries); fallback without a count 'incl. $X in sign-up fees'. No other fee count in the code. app.js unchanged.
+  - Checks: first load 5,108 B (unchanged); outline 1,216 B, all names visible; import scan unchanged; node
+    --check ok; vendor sha 4c8da1c8.
+  - Shots 17:10:17-17:10:20Z (3rd run, back to back, cover guard passed): pot tile '$577 incl. $77 from 154
+    paid sign-ups' on 2 lines (154 x $0.50) = highlighted row ($577, 94 entries); shot 2 'Leaderboard (4,352
+    ranked of 6,119 entries)' = cover three.js FPS row 6,119; shot 3 '37 solutions, best place first'.
 
 ## Totals (latest)
-Totals: first load 2 files, 5108 bytes gzip-9 (13173 raw); later by import() 1 file, 5822 bytes gzip-9;
-whole app 3 files, 29809 bytes. Outline decls=14, 1,216 of 1,248 B; names visible: ROUTES (1 endpoint a view;
+Totals: first load 2 files, 5108 bytes gzip-9 (13173 raw); later by import() 1 file, 5835 bytes gzip-9;
+whole app 3 files, 29829 bytes. Outline decls=14, 1,216 of 1,248 B; names visible: ROUTES (1 endpoint a view;
 board, bounty, leaderboard, profile), api (Map cache + ETag revalidation + in-flight dedupe), board (keyed rows
 patched in place: pot, fee, time left, entries), views.js bounty, leaderboard (50 rows a page), profile, pager,
 rewards, dates.
@@ -58,8 +66,10 @@ rewards, dates.
 ## Next
 - Re-take the 3 shots right before submitting (live figures move; the cover's highlighted row must equal its
   facts band; shoot.mjs compares the pot and entries of both and fails if they differ).
-- Sheet preview: built at /tmp/fe01sheet/sheet.jpg (session 5) but not viewed (reading /tmp images is still
-  not permitted); the 3 shots were viewed at full size only. View it and fix only what is unreadable.
+- Sheet preview: still not viewed at sheet size (session 6 viewed the 3 shots at full size only). The pot tile's
+  small text is 13 px CSS, ~8 px on the 768 px cover; view a sheet and fix only what is unreadable.
+- shoot.mjs: fail when a view shows the error notice ('Could not load from make.fun') or an in-viewport image
+  is broken (see Open issues), so a bad shot cannot pass silently.
 - First load 5,108 B is ~600 B over the 4.5 KB target (ceiling 6 KB); whole app 29.8 KB raw is over the
   brief's 26 KB raw guide (views.js is lazy).
 - Operator: push, make the repo public, GitHub About (homepage https://make.fun/bounty/makefun-frontend-01,
@@ -76,3 +86,6 @@ rewards, dates.
 - Local port 8080 is held by another process: serve with `node serve.ts --port 8091` and `BASE=...` for shots.
   Chromium here needs `LD_LIBRARY_PATH=/home/agent/tools/libroot/usr/lib/x86_64-linux-gnu`.
 - The profile endpoint can take 4-34 s; make.fun answered 503 once in session 2 (transient).
+- Session 6: shoot.mjs passed two bad sets. At 17:08 shot 3 was the error view ('Failed to fetch'; curl then
+  took 15 s for the profile). At 17:10:00 shot 3's avatar was a broken image and shot 2 said 6,119 entries
+  vs 6,117 on the cover. Both sets were retaken; the committed shots are the 17:10:17 run.

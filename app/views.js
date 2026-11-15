@@ -1,6 +1,6 @@
 import { esc, money, left, chip, fee, link } from './app.js';
 
-export function bounty(c) {
+function bounty(c) {
   const n = c.submissionCount || 0;
   const fees = Number(c.entryFeesUsd) > 0 ? '<small>incl. ' + money(c.entryFeesUsd) + ' fees</small>' : '';
   document.title = c.title + ' - Potboard (unofficial)';
@@ -17,7 +17,7 @@ ${tabs(c.slug, n, false)}</div>
 ${c.rules ? '<h2>Rules</h2><div class=md>' + md(c.rules) + '</div>' : '<p class=note>Loading rules...</p>'}</div>`;
 }
 
-export function leaderboard(d, page = 1) {
+function leaderboard(d, page = 1, item) { // 50 rows a page
   const all = rowsOf(d);
   const pages = Math.max(1, Math.ceil(all.length / 50));
   const p = Math.min(Math.max(1, page), pages);
@@ -25,41 +25,43 @@ export function leaderboard(d, page = 1) {
   const slug = typeof comp === 'string' ? comp : comp.slug || '';
   const title = comp.title || d.title || slug;
   const col = (d.columns || []).find(isRank(d.rank_key)) || { key: d.rank_key, title: 'Score' };
+  const ph = d.phase ? esc(d.phase.title) + (d.phase.finalized_at ? ': final' : ': provisional') : '';
+  const pg = pager(p, pages, all.length, slug, ph);
   document.title = 'Leaderboard: ' + title + ' - Potboard (unofficial)';
   return `<div data-k=h><p class=crumb><a href="#/">Bounties</a> › <a href="${link(slug)}">${esc(title)}</a></p>
 <h1>${esc(title)}</h1>${tabs(slug, all.length, true)}</div>
-${pager(p, pages, all.length, slug)}
-<table class=lb data-k=p${p}><thead><tr><th class=num>Rank</th><th>Entrant</th><th>Title</th>
-<th class=num>${esc(col.title)}</th><th>Received</th></tr></thead>
-<tbody>${all.slice((p - 1) * 50, p * 50).map(lbRow(col)).join('')}</tbody></table>
-${pager(p, pages, all.length, slug).replace('data-k=pg', 'data-k=pg2')}`;
+${pg}
+<table class=lb data-k=p${p}><thead><tr><th class=num>#</th><th>Entrant</th>
+<th class=num>${esc(col.title)}${micro(col.source) ? '<small>90% interval</small>' : ''}</th><th class=num>Prize</th></tr></thead>
+<tbody>${all.slice((p - 1) * 50, p * 50).map(lbRow(col, item)).join('')}</tbody></table>
+${pg.replace('data-k=pg', 'data-k=pg2')}`;
 }
 
-export function profile(u) {
+function profile(u) {
   const r = u.record || {};
-  const sol = u.solutions || [];
+  const sol = (u.solutions || []).slice().sort(byPlace);
   document.title = (u.handle || 'Profile') + ' - Potboard (unofficial)';
   return `<div data-k=h><p class=crumb><a href="#/">Bounties</a> › Profile</p>
-<h1><img class=av alt="" crossorigin=anonymous src="${esc(avatar(u))}">${esc(u.display_name || u.handle)}</h1>
-<p class=meta>@${esc(u.handle)}</p></div>
+<div class=who><img class=av alt="" crossorigin=anonymous src="${esc(avatar(u))}"><div>
+<h1>${esc(u.display_name || u.handle)}</h1><p class=meta>@${esc(u.handle)}${joined(u.joined_at)}</p></div></div></div>
 <div class=tiles data-k=t>${tile('Entered', r.competitions_entered)}${tile('Placed', r.competitions_placed)}
-${tile('Won', r.competitions_won)}${tile('Best place', r.best_placement)}${tile('Prize USD', money(r.prize_usd))}</div>
-<div data-k=s><h2>Solutions (${sol.length})</h2><table><thead><tr><th>Bounty</th><th>Title</th><th class=num>Score</th>
-<th>Entered</th></tr></thead><tbody>${sol.slice(0, 20).map(solRow).join('')}</tbody></table>
+${tile('Won', r.competitions_won)}${tile('Best place', r.best_placement)}${tile('Prizes', money(r.prize_usd))}</div>
+<div data-k=s class=pf><h2>Solutions (${sol.length}), best place first</h2><table class=sol><thead><tr><th>Place</th>
+<th>Bounty / solution</th><th class=num>Score</th><th class=num>Prize</th></tr></thead><tbody>${sol.slice(0, 20).map(solRow).join('')}</tbody></table>
 ${sol.length > 20 ? '<p class=meta>Showing the first 20 of ' + sol.length + '.</p>' : ''}</div>`;
 }
 
-export function pager(p, n, t, s) {
+function pager(p, n, t, s, f) {
   const base = link(s) + '/leaderboard/';
   const a = t ? (p - 1) * 50 + 1 : 0;
   const b = Math.min(t, p * 50);
   const prev = p > 1 ? '<a href="' + base + (p - 1) + '">Prev</a>' : 'Prev';
   const next = p < n ? '<a href="' + base + (p + 1) + '">Next</a>' : 'Next';
-  return '<p class=pager data-k=pg>Rows ' + a + '-' + b + ' of ' + t.toLocaleString('en-US') + ' · Page '
+  return '<p class=pager data-k=pg>' + (f ? f + ' · ' : '') + 'Rows ' + a + '-' + b + ' of ' + t.toLocaleString('en-US') + ' ranked · Page '
     + p + ' of ' + n + ' · ' + prev + ' · ' + next + '</p>';
 }
 
-export function rewards(c) {
+function rewards(c) {
   const list = c.rewardsNow || [];
   const top = Number(list[0] && list[0].amountUsd) || 1;
   let rows = '';
@@ -79,7 +81,7 @@ export function rewards(c) {
     + '<td class=num><b>' + money(c.potUsd) + '</b></td></tr></tbody></table>';
 }
 
-export function dates(c) {
+function dates(c) {
   const ph = c.phases || [];
   const at = c.opensAt || c.publishedAt;
   let li = '';
@@ -106,28 +108,36 @@ function isRank(key) {
 }
 
 function score(source, value, display) {
-  if (source && String(source).endsWith('_micro') && value != null) return (Number(value) / 10000).toFixed(2) + '%';
-  return esc(display ?? value ?? '-');
+  if (micro(source) && value != null) return pct(value);
+  const v = display ?? value;
+  if (v == null || v === 'n/a') return '-';
+  const n = Number(v);
+  return Number.isInteger(n) && Math.abs(n) >= 1000 ? n.toLocaleString('en-US') : esc(v);
 }
 
-function lbRow(col) {
+function lbRow(col, item) {
+  const prizes = (item && item.rewardsNow) || [];
   return (e) => {
     const full = e.values && typeof e.values === 'object';
     const v = full ? e.values[col.key] : e.value;
     const d = e.display && typeof e.display === 'object' ? e.display[col.key] : e.display;
     const house = e.house ? ' <span class="chip cx">house</span>' : '';
-    return '<tr><td class="num r" data-l=Rank>' + esc(e.rank ?? '-') + '</td><td data-l=Entrant>' + who(e.handle) + house
-      + '</td><td data-l=Title>' + esc(e.title || '') + '</td><td class="num s" data-l=Score>' + score(col.source, v, d)
-      + '</td><td data-l=Received>' + when(e.received_at) + '</td></tr>';
+    const iv = e.interval && e.interval.low != null && micro(col.source)
+      ? '<small>' + pct(e.interval.low) + '-' + pct(e.interval.high) + '</small>' : '';
+    const x = e.prize_rank ? prizes[e.prize_rank - 1] : null;
+    return '<tr><td class="num r" data-l=Rank>' + esc(e.rank ?? '-') + '</td><td data-l=Entrant><b>' + who(e.handle) + '</b>' + house
+      + '<small>' + esc(e.title || '') + '</small></td><td class="num s" data-l=Score>' + score(col.source, v, d) + iv
+      + '</td><td class=num data-l=Prize>' + (x && Number(x.amountUsd) > 0 ? money(x.amountUsd) : '') + '</td></tr>';
   };
 }
 
 function solRow(s) {
   const c = s.competition || {};
   const sc = s.score || {};
-  return '<tr><td data-l=Bounty><a href="' + link(c.slug || '') + '">' + esc(c.title || c.slug) + '</a></td><td data-l=Title>'
-    + esc(s.title || '') + '</td><td class=num data-l=Score>' + score(sc.column && sc.column.source, sc.value, sc.display)
-    + '</td><td data-l=Entered>' + when(s.entered_at || s.received_at) + '</td></tr>';
+  return '<tr><td data-l=Place>' + (s.placement ? place(s.placement) : '-') + '</td><td data-l=Bounty><a href="' + link(c.slug || '')
+    + '"><b>' + esc(c.title || c.slug) + '</b></a><small>' + esc(s.title || '') + '</small></td><td class=num data-l=Score>'
+    + score(sc.column && sc.column.source, sc.value, sc.display) + '</td><td class=num data-l=Prize>'
+    + (Number(s.prize_usd) > 0 ? money(s.prize_usd) : '') + '</td></tr>';
 }
 
 function tile(label, v) {
@@ -208,6 +218,24 @@ function cell(label, iso) {
   return '<div><span class=lab>' + label + '</span><br>' + when(iso, MINZ) + '</div>';
 }
 
+function micro(source) {
+  return Boolean(source) && String(source).endsWith('_micro');
+}
+
+function pct(v) {
+  return (Number(v) / 10000).toFixed(2) + '%';
+}
+
+function byPlace(a, b) {
+  return (a.placement || Infinity) - (b.placement || Infinity) || 0;
+}
+
+function joined(iso) {
+  return iso ? ' · joined ' + when(iso, DAY) : '';
+}
+
+export { bounty, leaderboard, profile };
+
 const DAY = { timeZone: 'UTC', day: 'numeric', month: 'short' };
 const MIN = { ...DAY, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' };
 const MINZ = { ...MIN, timeZoneName: 'short' };
@@ -219,8 +247,13 @@ const CSS = '.crumb{font-size:15px;margin:0 0 4px}'
   + '.facts b{display:block;font-size:36px;line-height:1.15;white-space:nowrap}.facts small{display:block;font-size:14px}'
   + '.one{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:2px 0}'
   + '@media(min-width:641px){.lb{table-layout:fixed}.lb td,.lb th{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
-  + '.lb th:nth-child(1){width:72px}.lb th:nth-child(2){width:24%}.lb th:nth-child(4){width:150px}'
-  + '.lb th:nth-child(5){width:205px}.lb td:nth-child(5){font-size:15px}}'
+  + '.lb th:nth-child(1){width:64px}.lb th:nth-child(3){width:200px}.lb th:nth-child(4){width:96px}'
+  + '.sol{table-layout:fixed}.sol td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.sol td>a{display:block;'
+  + 'overflow:hidden;text-overflow:ellipsis}.sol th:nth-child(1){width:72px}.sol th:nth-child(3){width:120px}'
+  + '.sol th:nth-child(4){width:90px}}.lb td,.sol td{vertical-align:top;line-height:1.3}.lb th{line-height:1.3}'
+  + '.lb small,.sol small{display:block;font-size:14px;font-weight:400;color:#4b5563;overflow:hidden;text-overflow:ellipsis}'
+  + '.who{display:flex;align-items:center;gap:4px}.who h1,.who p{margin:0}.tiles div:last-child{background:#eef8f1}'
+  + '.pf h2{font-size:20px;margin:10px 0 4px}'
   + '.lab{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:#4b5563;font-weight:700}'
   + '.two{display:grid;gap:16px}@media(min-width:760px){.two{grid-template-columns:1fr 1fr}}'
   + 'table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #d9dce3}'
@@ -229,8 +262,8 @@ const CSS = '.crumb{font-size:15px;margin:0 0 4px}'
   + '.tabs{display:flex;gap:16px;border-bottom:1px solid #d9dce3;margin:2px 0;font-size:17px}'
   + '.tabs a{padding:6px 2px;text-decoration:none}'
   + '.tabs [aria-current]{border-bottom:3px solid #3b2bd1;font-weight:700;color:#14171c}'
-  + '.lb td,.lb th{font-size:18px;height:32px;padding:2px 10px}.lb th{font-size:15px}'
-  + '.lb .r,.lb .s{font-size:20px;font-weight:700}.pager{font-size:20px;margin:8px 0}'
+  + '.lb td,.lb th{font-size:18px;padding:2px 10px}.lb th{font-size:15px}'
+  + '.lb .r,.lb .s{font-size:20px;font-weight:700}.pager{font-size:18px;margin:4px 0}'
   + '.tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.tiles b{display:block;font-size:26px}'
   + '.av{width:64px;height:64px;border-radius:50%;vertical-align:middle;margin-right:10px;background:#eceef2}'
   + '.md{background:#fff;border:1px solid #d9dce3;border-radius:8px;padding:6px 16px;overflow-wrap:anywhere}'

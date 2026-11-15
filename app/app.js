@@ -5,7 +5,7 @@ const ROUTES = { // #/ #/bounty/:s #/bounty/:s/leaderboard/:p #/u/:h
   profile: (h) => '/profiles/' + h,
 };
 
-export async function api(path) { // Map cache + ETag revalidation
+async function api(path) { // Map cache + ETag revalidation; 1 JSON endpoint a view
   const old = cache.get(path);
   const m = Math.floor(Date.now() / 60000);
   if (old && old.minute === m) return old.data;
@@ -227,7 +227,7 @@ async function paint(kind, data, parts, view) {
     patch(main, board(data), view);
   } else {
     const V = await views();
-    patch(main, V[kind](data, Number(parts[3]) || 1), view);
+    patch(main, V[kind](data, Number(parts[3]) || 1, fromBoard(dec(parts[1] || ''))), view);
   }
   stamp();
 }

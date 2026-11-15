@@ -128,12 +128,14 @@ export function left(iso) {
   return h >= 48 ? Math.floor(h / 24) + 'd ' + (h % 24) + 'h' : h ? h + 'h ' + m + 'm' : m + 'm';
 }
 
-export function chip(c) {
+export function chip(c, long) {
   const now = Date.now();
   const end = Date.parse(c.deadline);
-  const opens = Date.parse(c.opensAt || c.publishedAt);
+  const at = c.opensAt || c.publishedAt;
+  const opens = Date.parse(at);
   if (opens > now || (c.acceptingSubmissions === false && end > now)) {
-    return '<span class="chip cs" title="' + esc(c.opensAt || c.publishedAt) + '">Opens in ' + left(c.opensAt || c.publishedAt) + '</span>';
+    const txt = long || !(opens > now) ? 'Opens ' + utc(opens) : 'Opens in ' + left(at);
+    return '<span class="chip cs" title="' + esc(at) + ' (UTC)">' + txt + '</span>';
   }
   const ms = end - now;
   const cls = !(ms > 0) ? 'cx' : ms < 3600000 ? 'c1' : ms < 86400000 ? 'c24' : '';
@@ -152,6 +154,10 @@ export const say = (n, w) => n.toLocaleString('en-US') + ' ' + w + (n === 1 ? ''
 
 function ent(c) {
   return '&#' + c.charCodeAt(0) + ';';
+}
+
+function utc(t) {
+  return t > 0 ? new Date(t).toISOString().slice(0, 16).replace('T', ' ') + ' UTC' : 'soon';
 }
 
 function dec(s) {
@@ -187,22 +193,9 @@ async function load(path, old, m) {
   const text = await r.text();
   if (old && old.text === text) { old.etag = etag; old.minute = m; return old.data; }
   let data = JSON.parse(text);
-  if (data && data.next_cursor && path === ROUTES.board()) data = await more(data, path);
+  if (data && data.next_cursor && path === ROUTES.board()) data = await (await views()).more(data, BASE + path);
   cache.set(path, { etag, text, data, minute: m });
   return data;
-}
-
-async function more(data, path) {
-  const items = data.items.slice();
-  let cursor = data.next_cursor;
-  for (let i = 0; cursor && i < 5; i++) {
-    const r = await fetch(BASE + path + '&cursor=' + encodeURIComponent(cursor), { cache: 'no-cache' });
-    if (!r.ok) break;
-    const page = await r.json();
-    items.push(...page.items);
-    cursor = page.next_cursor;
-  }
-  return { items, next_cursor: null };
 }
 
 function fromBoard(slug) {

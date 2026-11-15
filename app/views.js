@@ -5,7 +5,7 @@ export function bounty(c) {
   const fees = Number(c.entryFeesUsd) > 0 ? '<small>incl. ' + money(c.entryFeesUsd) + ' fees</small>' : '';
   document.title = c.title + ' - Potboard (unofficial)';
   return `<div data-k=h><p class=crumb><a href="#/">Bounties</a> › ${esc(c.title)}</p>
-<h1>${esc(c.title)} ${chip(c)}</h1><p class="meta one" title="${esc(c.summary || '')}">${esc(c.summary || '')}</p>
+<h1>${esc(c.title)} ${chip(c, true)}</h1><p class="meta one" title="${esc(c.summary || '')}">${esc(c.summary || '')}</p>
 ${tabs(c.slug, n, false)}</div>
 <div class=facts data-k=f><div><span class=lab>Live pot</span><b>${money(c.potUsd)}</b>${fees}</div>
 <div><span class=lab>Entry fee</span><b>${fee(c.entryFeeUsd)}</b></div>
@@ -229,3 +229,17 @@ const CSS = '.crumb{font-size:15px;margin:0 0 4px}'
   + '.tabs a{display:grid;min-height:44px}}';
 
 document.head.insertAdjacentHTML('beforeend', '<style>' + CSS + '</style>');
+
+// The board's later pages, fetched only when the first page names a next_cursor (at most 5 more).
+export async function more(data, url) {
+  const items = data.items.slice();
+  let cursor = data.next_cursor;
+  for (let i = 0; cursor && i < 5; i++) {
+    const r = await fetch(url + '&cursor=' + encodeURIComponent(cursor), { cache: 'no-cache' });
+    if (!r.ok) break;
+    const page = await r.json();
+    items.push(...page.items);
+    cursor = page.next_cursor;
+  }
+  return { items, next_cursor: null };
+}

@@ -122,12 +122,6 @@ export function left(iso) {
   return h >= 48 ? Math.floor(h / 24) + 'd ' + (h % 24) + 'h' : h ? h + 'h ' + m + 'm' : m + 'm';
 }
 
-export function when(iso) {
-  if (!iso) return '-';
-  const d = new Date(iso);
-  return '<time datetime=' + esc(iso) + '>' + d.toISOString().slice(0, 16).replace('T', ' ') + ' UTC</time>';
-}
-
 export function chip(c) {
   const now = Date.now();
   const end = Date.parse(c.deadline);
@@ -146,10 +140,6 @@ export function fee(v) {
 
 export function link(slug) {
   return '#/bounty/' + encodeURIComponent(slug);
-}
-
-export function who(h) {
-  return '<a href="#/u/' + encodeURIComponent(h) + '">' + esc(h) + '</a>';
 }
 
 export const say = (n, w) => n.toLocaleString('en-US') + ' ' + w + (n === 1 ? '' : 's');

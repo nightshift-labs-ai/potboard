@@ -1,4 +1,4 @@
-import { esc, money, left, when, chip, fee, link, who, say } from './app.js';
+import { esc, money, left, chip, fee, link, say } from './app.js';
 
 export function bounty(c) {
   const n = c.submissionCount || 0;
@@ -187,3 +187,39 @@ function md(src) {
   flush();
   return out + (open ? '</details>' : '');
 }
+
+function when(iso) {
+  if (!iso) return '-';
+  const t = Date.parse(iso);
+  if (!(t > 0)) return esc(iso);
+  return '<time datetime=' + esc(iso) + '>' + new Date(t).toISOString().slice(0, 16).replace('T', ' ') + ' UTC</time>';
+}
+
+function who(h) {
+  return '<a href="#/u/' + encodeURIComponent(h) + '">' + esc(h) + '</a>';
+}
+
+const CSS = '.crumb{font-size:15px;margin:0 0 4px}'
+  + '.facts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0}'
+  + '.facts div,.tiles div{background:#fff;border:1px solid #d9dce3;border-radius:8px;padding:8px 12px}'
+  + '.facts div:first-child{background:#eef8f1}.facts b{display:block;font-size:36px;line-height:1.15}'
+  + '.lab{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:#4b5563;font-weight:700}'
+  + '.two{display:grid;gap:16px}@media(min-width:760px){.two{grid-template-columns:1fr 1fr}}'
+  + 'table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #d9dce3}'
+  + 'th,td{padding:5px 10px;text-align:left}th{font-size:13px;text-transform:uppercase;color:#4b5563}'
+  + 'tbody tr:nth-child(even){background:#f4f5f7}.num{text-align:right}'
+  + '.tabs{display:flex;gap:16px;border-bottom:1px solid #d9dce3;margin:8px 0;font-size:17px}'
+  + '.tabs a{padding:6px 2px;text-decoration:none}'
+  + '.tabs [aria-current]{border-bottom:3px solid #3b2bd1;font-weight:700;color:#14171c}'
+  + '.lb td,.lb th{font-size:18px;height:32px;padding:2px 10px}.lb th{font-size:15px}'
+  + '.lb .r,.lb .s{font-size:20px;font-weight:700}.pager{font-size:20px;margin:8px 0}'
+  + '.tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.tiles b{display:block;font-size:26px}'
+  + '.av{width:64px;height:64px;border-radius:50%;vertical-align:middle;margin-right:10px;background:#eceef2}'
+  + '.md{background:#fff;border:1px solid #d9dce3;border-radius:8px;padding:6px 16px;overflow-wrap:anywhere}'
+  + 'code{background:#f4f5f7;padding:0 4px;border-radius:4px}'
+  + '@media(max-width:640px){.facts,.tiles{grid-template-columns:1fr 1fr}.facts b{font-size:26px}'
+  + 'table,tbody,tr,td{display:block}thead{display:none}tr{border-bottom:1px solid #d9dce3;padding:4px 0}'
+  + 'td::before{content:attr(data-l) ": ";color:#4b5563;font-size:13px;text-transform:uppercase}'
+  + '.tabs a{display:grid;min-height:44px}}';
+
+document.head.insertAdjacentHTML('beforeend', '<style>' + CSS + '</style>');

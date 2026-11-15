@@ -152,7 +152,7 @@ function avatar(u) {
 
 function place(n) {
   const s = n % 100 > 10 && n % 100 < 14 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th';
-  return n + s;
+  return Number(n) + s;
 }
 
 function tabs(slug, n, lb) {

@@ -39,9 +39,18 @@
   - Outline comments: ROUTES '1 endpoint a view'; api 'Map cache + ETag revalidation + in-flight dedupe'
     (the inflight Map); board 'keyed rows patched in place: pot, fee, time left, entries'.
 
+- Session 5 (2026-11-15, ~16:50-17:02 UTC), commit 379fced + shots:
+  - Profile heading is '<n> solutions, best place first' (solHead; solSlug removed): no bounty count, so no
+    heading number can disagree with the Entered tile. Tiles unchanged; app.js unchanged.
+  - Checks: outline 1,216 B, all names visible; import scan unchanged (app.js dyn ['./views.js'] x1, views.js
+    static ['./app.js']); node --check ok; vendor sha 4c8da1c8.
+  - Shots 16:58-16:59Z, back to back, cover guard passed: facts band '$576 incl. $76 from 152 fees'
+    (152 x $0.50) = highlighted row ($576, 91 entries); shot 2 'Leaderboard (4,205 ranked of 6,073 entries)'
+    = cover three.js FPS row 6,073; shot 3 '37 solutions, best place first', Entered 29.
+
 ## Totals (latest)
-Totals: first load 2 files, 5108 bytes gzip-9 (13173 raw); later by import() 1 file, 5875 bytes gzip-9;
-whole app 3 files, 29971 bytes. Outline decls=14, 1,216 of 1,248 B; names visible: ROUTES (1 endpoint a view;
+Totals: first load 2 files, 5108 bytes gzip-9 (13173 raw); later by import() 1 file, 5822 bytes gzip-9;
+whole app 3 files, 29809 bytes. Outline decls=14, 1,216 of 1,248 B; names visible: ROUTES (1 endpoint a view;
 board, bounty, leaderboard, profile), api (Map cache + ETag revalidation + in-flight dedupe), board (keyed rows
 patched in place: pot, fee, time left, entries), views.js bounty, leaderboard (50 rows a page), profile, pager,
 rewards, dates.
@@ -49,17 +58,14 @@ rewards, dates.
 ## Next
 - Re-take the 3 shots right before submitting (live figures move; the cover's highlighted row must equal its
   facts band; shoot.mjs compares the pot and entries of both and fails if they differ).
-- Sheet preview: built at /tmp/fe01tools/sheet.jpg but not viewed (reading /tmp images was not permitted);
-  view it and fix only what is unreadable.
-- First load 5,148 B is ~650 B over the 4.5 KB target (ceiling 6 KB); whole app 29.5 KB raw is over the
+- Sheet preview: built at /tmp/fe01sheet/sheet.jpg (session 5) but not viewed (reading /tmp images is still
+  not permitted); the 3 shots were viewed at full size only. View it and fix only what is unreadable.
+- First load 5,108 B is ~600 B over the 4.5 KB target (ceiling 6 KB); whole app 29.8 KB raw is over the
   brief's 26 KB raw guide (views.js is lazy).
 - Operator: push, make the repo public, GitHub About (homepage https://make.fun/bounty/makefun-frontend-01,
   topic makefun).
 
 ## Open issues
-- Shot 3 (16:18Z): the ENTERED tile (record.competitions_entered) reads 29, but the solutions list spans 28
-  distinct bounties (it was 28 = 28 at 16:1xZ). Both numbers are the API's own; the cause is unknown. Retake
-  before submitting; if they still differ, decide on wording (do not adjust either number).
 - The ROUTES line no longer lists the hash patterns (it says '1 endpoint a view'); the 4 member lines still
   name the views and endpoints.
 - Keep the pane and the Prize column cache-only: the `api` comment ('1 JSON endpoint a view') is true only

@@ -6,8 +6,11 @@ function board(data) { // keyed rows patched in place: pot, fee, time left, entr
   const soon = [];
   const shut = [];
   const cats = [...new Set(data.items.map((b) => b.category).filter(Boolean))].sort();
+  let pool = 0;
   for (const b of data.items) {
     if (cat && b.category !== cat) continue;
+    pool++;
+    if (!hit(b)) continue;
     if (Date.parse(b.publishedAt) > now) soon.push(b);
     else if (Date.parse(b.deadline) > now) open.push(b);
     else shut.push(b);
@@ -21,7 +24,7 @@ function board(data) { // keyed rows patched in place: pot, fee, time left, entr
   document.title = 'Bounties - Potboard (unofficial make.fun frontend)';
   return `<p class=strip data-k=strip><b>${open.length}</b> taking entries · <b>${money(pot)}</b>
  in live pots · <b>${n.toLocaleString('en-US')}</b> entries${soonest(open)}</p>
-<div class=ctl data-k=ctl>${SORTS.map(pickSort).join('')}<span></span>${['', ...cats].map(pickCat).join('')}</div>
+<div class=ctl data-k=ctl>${SORTS.map(pickSort).join('')}<span></span>${['', ...cats].map(pickCat).join('')}${seek(open.length + soon.length + shut.length, pool)}</div>
 <h2 data-k=h1>Taking entries (${open.length})</h2>${head('h1')}${open.map(row).join('')}
 <h2 data-k=h2>Opening soon (${soon.length})</h2>${head('h2')}${soon.map(row).join('')}
 <details data-k=x><summary>Closed, awaiting results (${shut.length})</summary>
@@ -326,6 +329,7 @@ function order(a, b) {
 
 function choose(el) {
   if (el.dataset.s) sort = el.dataset.s;
+  else if ('q' in el.dataset) q = el.value;
   else cat = el.dataset.c;
   const d = cache.get(ROUTES.board())?.data;
   if (d && main.dataset.v === ROUTES.board()) patch(main, board(d), main.dataset.v);
@@ -524,7 +528,10 @@ const CSS = '*{box-sizing:border-box}a{color:#3b2bd1}:focus-visible{outline:3px 
   + '.ctl{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0}.ctl span{width:12px}aside .ctl{margin:6px 0 0;gap:4px}aside .ctl button{font-size:13px;min-height:26px;padding:0 9px}'
   + '.ctl button{font:inherit;font-size:15px;min-height:34px;padding:0 12px;border:1px solid #d9dce3;'
   + 'border-radius:17px;background:#fff;color:#14171c}.ctl [aria-pressed=true]{background:#3b2bd1;color:#fff}'
-  + '@media(max-width:640px){.ctl button{min-height:44px}}.how{margin:0 0 6px;font-weight:600;color:#14171c}';
+  + '@media(max-width:640px){.ctl button{min-height:44px}}.how{margin:0 0 6px;font-weight:600;color:#14171c}'
+  + '.ctl input{font:inherit;font-size:15px;width:8em;min-height:34px;padding:0 10px;border:1px solid #d9dce3;'
+  + 'border-radius:17px;margin-left:6px}aside .ctl input{font-size:13px;min-height:26px;width:6.5em}'
+  + '.ctl output{align-self:center;font-size:13px;font-weight:700;color:#4a5060}';
 
 document.head.insertAdjacentHTML('beforeend', '<style>' + CSS + '</style>');
 document.querySelector('footer').insertAdjacentHTML('afterbegin', '<p class=how>first load: index.html + app.js · views by '
@@ -624,3 +631,40 @@ export async function more(data, path) {
   }
   return { items, next_cursor: null };
 }
+
+// Board filter: the text field at the end of the chip row narrows rows by title, slug or category,
+// case-insensitively, through board() and patch() with no request. '/' focuses it, Escape clears it.
+let q = '';
+
+function hit(b) {
+  const needle = q.trim().toLowerCase();
+  if (!needle) return true;
+  return [b.title, b.slug, b.category].some((v) => String(v ?? '').toLowerCase().includes(needle));
+}
+
+function seek(n, m) {
+  const label = 'Filter bounties by title, slug or category (press /)';
+  const shown = q.trim() ? '<output>' + n + ' of ' + m + '</output>' : '';
+  return '<input type=search data-q placeholder=Filter aria-label="' + label + '" value="' + esc(q) + '">' + shown;
+}
+
+// Applies the field's text; a repaint may replace the field, so focus and caret move to the new one.
+function sift(el) {
+  const had = document.activeElement === el;
+  const a = el.selectionStart;
+  const z = el.selectionEnd;
+  choose(el);
+  const f = document.querySelector('[data-q]');
+  if (had && f && f !== el) { f.focus(); f.setSelectionRange(a, z); }
+}
+
+function keys(e) {
+  const f = document.querySelector('[data-q]');
+  if (!f || e.ctrlKey || e.metaKey || e.altKey) return;
+  const typing = e.target.closest && e.target.closest('input,textarea,select,[contenteditable]');
+  if (e.key === '/' && !typing) { e.preventDefault(); f.focus(); }
+  else if (e.key === 'Escape' && (e.target === f || (!typing && q))) { e.preventDefault(); f.value = ''; sift(f); }
+}
+
+document.addEventListener('input', (e) => e.target.matches('[data-q]') && sift(e.target));
+document.addEventListener('keydown', keys);

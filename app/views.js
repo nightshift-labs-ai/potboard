@@ -58,9 +58,9 @@ function leaderboard(d, page = 1, item) { // 50 rows a page
   const ph = d.phase ? esc(d.phase.title) + (d.phase.finalized_at ? ': final' : ': provisional') : '';
   const pg = pager(p, pages, all.length, slug, ph);
   document.title = 'Leaderboard: ' + title + ' - Potboard (unofficial)';
-  return `<div data-k=h><p class=crumb><a href="#/">Bounties</a> › <a href="${link(slug)}">${esc(title)}</a></p>
+  return `<div class=lbh data-k=h><p class=crumb><a href="#/">Bounties</a> › <a href="${link(slug)}">${esc(title)}</a></p>
 <h1>${esc(title)}</h1>${tabs(slug, all.length, true, item && item.submissionCount)}</div>
-${pg}
+${band(all, col, item)}${pg}
 <table class=lb data-k=p${p}><thead><tr><th class=num>#</th><th>Entrant</th>
 <th class=num>${esc(col.title)}${micro(col.source) ? '<small>90% interval</small>' : ''}</th><th class=num>Prize</th></tr></thead>
 <tbody>${all.slice((p - 1) * 50, p * 50).map(lbRow(col, item)).join('')}</tbody></table>
@@ -172,6 +172,23 @@ function solRow(s) {
     + '"><b>' + esc(c.title || c.slug) + '</b></a><small>' + esc(s.title || '') + '</small></td><td class=num data-l=Score>'
     + score(sc.column && sc.column.source, sc.value, sc.display) + '</td><td class=num data-l=Prize>'
     + (Number(s.prize_usd) > 0 ? money(s.prize_usd) : '') + '</td></tr>';
+}
+
+// Leaderboard band: Live pot and Time left from the cached board item (0 requests; left out on a deep
+// link with no cached board), the ranked count, and row 1 as the leader.
+function band(all, col, item) {
+  const top = all[0];
+  const n = item && item.submissionCount;
+  let h = item ? '<div class=pot><span class=lab>Live pot</span><b>' + money(item.potUsd) + '</b></div>'
+    + '<div><span class=lab>Time left</span><b data-t=' + esc(item.deadline) + '>' + left(item.deadline) + '</b></div>' : '';
+  h += '<div><span class=lab>Ranked</span><b>' + all.length.toLocaleString('en-US') + '</b>'
+    + (n ? '<small>of ' + Number(n).toLocaleString('en-US') + ' entries</small>' : '') + '</div>';
+  if (top) {
+    const v = top.values && typeof top.values === 'object' ? top.values[col.key] : top.value;
+    const d = top.display && typeof top.display === 'object' ? top.display[col.key] : top.display;
+    h += '<div><span class=lab>Leader</span><b>' + esc(top.handle || '-') + '</b><small>' + score(col.source, v, d) + '</small></div>';
+  }
+  return '<div class=band data-k=band>' + h + '</div>';
 }
 
 function tile(label, v) {
@@ -456,6 +473,10 @@ const CSS = '*{box-sizing:border-box}a{color:#3b2bd1}:focus-visible{outline:3px 
   + 'a,button{min-height:44px}header nav a,header form{display:flex;align-items:center}}'
   + '.crumb{font-size:15px;margin:0 0 4px}'
   + '.facts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:6px 0}'
+  + '.band{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0}'
+  + '.band div{background:#fff;border:1px solid #d9dce3;border-radius:8px;padding:1px 6px;min-width:0}'
+  + '.band .pot{background:#eef8f1}.band b{font-size:17px;margin:0 4px;overflow-wrap:anywhere}.band small{white-space:nowrap;font-size:14px}'
+  + '.band .lab{font-size:11px}.lbh .crumb{display:none}.lbh h1{margin:0}'
   + '.facts div,.tiles div{background:#fff;border:1px solid #d9dce3;border-radius:8px;padding:8px 12px}'
   + '.facts div:first-child{background:#eef8f1}.facts div{padding:3px 10px}'
   + '.facts b{display:block;font-size:36px;line-height:1.15;white-space:nowrap}.facts small{display:block;font-size:14px}'

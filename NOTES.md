@@ -104,6 +104,9 @@
     35h 18m / 184 = facts band; shot 2 band '$1,000 · 20h 18m · Ranked 4,916 of 7,078 entries · Leader
     tidy-meteor-25 97.36%' = cover three.js row ($1,000, 7,078); counters 1 request in all 3; shot 3
     '35 solutions', Bounties entered 29, Best place 1st. Viewed at full size only, NOT at sheet size.
+  - Section 10 partial (01:13Z): grep row clean (no on*=, <link>, <base>, @import, eval, http://; only
+    make.fun URLs; 'import(' only at app.js's one call site); main.ts twice -> cmp + diff -r identical;
+    vendor sha 4c8da1c8. Not run: kit check, gitleaks, mocked 429.
 
 ## Totals (latest)
 Totals: first load 2 files, 2070 bytes gzip-9 (4437 raw); later by import() 1 file, 10374 bytes gzip-9;

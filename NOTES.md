@@ -80,27 +80,43 @@
   1280, a profile at 390x844; all reached __shotReady with 0 page errors, no error note, no horizontal scroll.
   NOT done: the cover layout compare against 57f1f89, a mocked-429 retest. Items 2 and 3 not started.
 
+- Session B of 2 (2026-11-16, 01:04-01:13 UTC), commits b58559b..0f9ac6d + shots:
+  - Counter next to the stamp: 'this view: N API request(s) · N unchanged (ETag) · N from memory'. It counts
+    every fetch in load(), more() pages and the 429 retry; unchanged = same ETag or same text; from memory =
+    minute-cache hit, in-flight join, a page turn, or the cached board item a non-board view uses. It resets
+    only on a non-quiet route() and never says 304. Smoke test: the cover shows 1 request (= network log),
+    chip clicks add 0, a bounty shows 1 + 1 from memory, a leaderboard page turn shows 0 requests.
+  - Cover compare vs 57f1f89 at 1280x800 (#/): 218 elements in both; the only diff is the nav box being
+    narrower because the stamp is longer. No regression.
+  - Item 1: sort chips (Closing soon, Biggest pot, Most entries) + category chips (All + data categories),
+    on the board and in the side pane; patch() re-render, no fetch; section counts and strip follow filter.
+    Cover pane: 9 open rows visible (10 before).
+  - Item 2: time left as bold text (amber <24h, red <1h) + a bar of the opened-to-deadline span; header
+    'Fee'; strip 'next deadline <left>'; bounty status 'Taking entries · closes 17 Nov, 12:30 UTC'.
+  - Item 3: leaderboard band (Live pot, Time left, Ranked N of M entries, Leader handle score) from the
+    cached board item + row 1; deep link shows Ranked + Leader only. Leaderboard breadcrumb hidden (tabs
+    keep Overview) so the band sits above rows 1-4 at 800x500.
+  - Item 4: 'Bounties entered', Best place '1st'; facts: '214 paid' under Entry fee, pot 'incl. $107 in
+    entry fees' (214 x $0.50 = $107).
+  - Item 5: footer line naming the techniques (no byte figure) above the disclaimer; 'import(' is written
+    as an HTML entity in the string, so the source has no 'import(' text outside the one call site.
+  - Shots 01:12Z with shoot.mjs, back to back, cover guard passed: cover highlighted row $607 / $0.50 /
+    35h 18m / 184 = facts band; shot 2 band '$1,000 · 20h 18m · Ranked 4,916 of 7,078 entries · Leader
+    tidy-meteor-25 97.36%' = cover three.js row ($1,000, 7,078); counters 1 request in all 3; shot 3
+    '35 solutions', Bounties entered 29, Best place 1st. Viewed at full size only, NOT at sheet size.
+
 ## Totals (latest)
-Totals: first load 2 files, 2007 bytes gzip-9 (4285 raw); later by import() 1 file, 8778 bytes gzip-9;
-whole app 3 files, 30800 bytes. Outline decls=14, 1,230 of 1,248 B; names visible: ROUTES + 4 members, api
+Totals: first load 2 files, 2070 bytes gzip-9 (4437 raw); later by import() 1 file, 10374 bytes gzip-9;
+whole app 3 files, 36686 bytes. Outline decls=14, 1,231 of 1,248 B; names visible: ROUTES + 4 members, api
 (Map cache + ETag revalidation + in-flight dedupe), patch, views board (keyed rows...), bounty, leaderboard
-(50 rows a page), profile, pager, rewards.
+(50 rows a page), profile, pager, rewards. Import scan: app.js dyn ['./views.js'] x1, views.js static ['./app.js'].
 
 ## Next
-- Item 1 rest: 2,007 -> <=1,900 B (index.html 623 + app.js 1,403 gz). Candidates: compact patch, move the
-  turn/scroll logic into show, shorten the index title. Then the cover layout compare vs 57f1f89 (629 elements).
-- Item 2 (outline order: app.js api line first, then ROUTES + 4 members, then the counter; views.js board,
-  bounty, leaderboard, profile, helpers) and item 3 (per-view counter 'this view: N API request(s) · N unchanged
-  (ETag) · N from memory', reset on non-quiet route only, never '304') are NOT started.
-- Then the planned session-B work: board chips, time-left, leaderboard band, labels, footer, shots.
-- Re-take the 3 shots right before submitting (live figures move; the cover's highlighted row must equal its
-  facts band; shoot.mjs compares the pot and entries of both and fails if they differ).
-- Sheet preview: still not viewed at sheet size (session 6 viewed the 3 shots at full size only). The pot tile's
-  small text is 13 px CSS, ~8 px on the 768 px cover; view a sheet and fix only what is unreadable.
-- shoot.mjs: fail when a view shows the error notice ('Could not load from make.fun') or an in-viewport image
-  is broken (see Open issues), so a bad shot cannot pass silently.
-- First load 5,108 B is ~600 B over the 4.5 KB target (ceiling 6 KB); whole app 29.8 KB raw is over the
-  brief's 26 KB raw guide (views.js is lazy).
+- View the 3 shots at sheet size (cover ~768 px, others ~381 px): the side-pane chips are 13 px and the
+  band labels 11 px CSS; fix only what is unreadable, then retake.
+- Whole app 36.7 KB raw (views.js 10.4 KB gzip-9) is over the brief's 26 KB raw / 5 KB lazy guides.
+- Outline order item (api first) left as the brief's order on purpose (session rule: brief order).
+- Re-take the 3 shots right before submitting; run section 10 in full (kit check, two-run cmp, gitleaks).
 - Operator: push, make the repo public, GitHub About (homepage https://make.fun/bounty/makefun-frontend-01,
   topic makefun).
 

@@ -56,6 +56,15 @@
     paid sign-ups' on 2 lines (154 x $0.50) = highlighted row ($577, 94 entries); shot 2 'Leaderboard (4,352
     ranked of 6,119 entries)' = cover three.js FPS row 6,119; shot 3 '37 solutions, best place first'.
 
+- Session A of 2 (2026-11-16, ~11 min): item 1 done only as WIP on branch `session-a-wip` (6aabf44); main still
+  57f1f89. Moved board/row/head/side/fromBoard + esc/money/left/chip/fee/link/say/ent/utc into views.js, all CSS
+  into views.js's CSS (index.html keeps one body rule), app.js exports {ROUTES, cache, patch}, route() starts
+  views() and api(path) together, `V` holds the module (tick uses V.left). Checkpoint on the branch: node --check
+  ok both; import scan app.js dyn ['./views.js'] x1, views.js static ['./app.js']; outline 1,229 B, visible:
+  ROUTES + 4 members, api (Map cache + ETag...), patch, views board (keyed rows...), bounty, leaderboard (50 rows
+  a page), profile, pager, rewards. Branch Totals: first load 2 files, 2730 B gzip-9 (6287 raw); later 7862 B;
+  whole 30239 B. NOT render-tested in a browser; cover not compared.
+
 ## Totals (latest)
 Totals: first load 2 files, 5108 bytes gzip-9 (13173 raw); later by import() 1 file, 5835 bytes gzip-9;
 whole app 3 files, 29829 bytes. Outline decls=14, 1,216 of 1,248 B; names visible: ROUTES (1 endpoint a view;
@@ -64,6 +73,13 @@ patched in place: pot, fee, time left, entries), views.js bounty, leaderboard (5
 rewards, dates.
 
 ## Next
+- Session B first: on `session-a-wip`, render-test #/ -> bounty at 1280 (cover unchanged? pane + highlighted row),
+  leaderboard, profile, 390x844; then cut app.js from 2,730 B to <=1,900 B gzip-9 (app.js is 5,297 raw: candidates
+  are moving fail/paint/load's 429+more branches into views.js); then merge into main by fast-forward.
+- Item 2 (outline order: app.js api line first, then ROUTES + 4 members, then the counter; views.js board,
+  bounty, leaderboard, profile, helpers) and item 3 (per-view counter 'this view: N API request(s) · N unchanged
+  (ETag) · N from memory', reset on non-quiet route only, never '304') are NOT started.
+- Then the planned session-B work: board chips, time-left, leaderboard band, labels, footer, shots.
 - Re-take the 3 shots right before submitting (live figures move; the cover's highlighted row must equal its
   facts band; shoot.mjs compares the pot and entries of both and fails if they differ).
 - Sheet preview: still not viewed at sheet size (session 6 viewed the 3 shots at full size only). The pot tile's

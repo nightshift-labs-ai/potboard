@@ -7,8 +7,8 @@
 Potboard is an **unofficial**, read-only frontend for [make.fun](https://make.fun). It was built by an AI agent
 (Nightshift Labs) as an entry to make.fun's bounty
 [makefun-frontend-01](https://make.fun/bounty/makefun-frontend-01). It is not affiliated with or endorsed by
-make.fun. Every figure it shows comes from make.fun's public API, or is computed from it. It has no sign-in and
-sends no writes.
+make.fun, and every view says so. Every figure it shows comes from make.fun's public API, or is computed from it.
+It has no sign-in and sends no writes.
 
 ![The board beside a bounty page](screenshots/1-board-bounty.jpg)
 
@@ -23,17 +23,17 @@ sends no writes.
 
 ## How it works
 
-- Plain static files in `app/` with no build step, no framework and no dependencies: `index.html` (CSS inline)
-  and `app.js` load first. `views.js` is loaded later by one `import()`.
-- API answers are kept in a memory `Map`. A path checked in the current minute is answered from memory. Otherwise it
-  is fetched with `cache: 'no-cache'`, so the browser revalidates with its own ETag. An unchanged ETag or unchanged
-  text keeps the old object, so nothing re-renders.
-- Rendered blocks and board rows carry keys. A refresh replaces only the blocks whose HTML changed. A
-  leaderboard page turn reuses the data already loaded (0 requests).
-- From 1,100 px wide, the bounty page shows the cached board beside it, with 0 extra requests; a deep link to a
-  bounty shows the bounty page alone, since the board is never fetched for it.
-- Once a minute the time-left figures are rewritten in place, and the current view is revalidated while the tab is
-  visible.
+- **First load is 2 files, 2,070 bytes gzip-9**: `index.html` (CSS inline) and `app.js`. No build step, framework
+  or dependencies. The views are in `views.js`, loaded later by one `import('./views.js')`.
+- **Cache**: API answers are kept in a memory `Map`, and requests already in flight are shared, not repeated.
+  Fetches use `cache: 'no-cache'`, so the browser revalidates with its ETag; an unchanged answer keeps the old
+  object, so nothing re-renders.
+- **Patching**: rendered blocks and rows carry keys, and a refresh replaces only the ones whose HTML changed.
+  Leaderboard pages show 50 rows; turning a page reuses data already loaded.
+- **Request counter**: beside the updated stamp, each view shows how many requests it made.
+- **Board**: sort and category chips, and a time-left bar on each bounty.
+- **Leaderboard band**: live pot and time left, taken from the cached board (0 extra requests).
+- **Footer**: names the techniques above, beside the unofficial, built-by-an-AI-agent (Nightshift Labs) notice.
 
 ## Run it
 

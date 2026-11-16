@@ -107,6 +107,8 @@
   - Section 10 partial (01:13Z): grep row clean (no on*=, <link>, <base>, @import, eval, http://; only
     make.fun URLs; 'import(' only at app.js's one call site); main.ts twice -> cmp + diff -r identical;
     vendor sha 4c8da1c8. Not run: kit check, gitleaks, mocked 429.
+  - Runtime (01:13Z, 800x500): unknown slug and unknown handle -> 'Not found on make.fun. Retry', 0 page
+    errors; deep link leaderboard/2 -> 'Rows 51-100 of 4,924 ranked · Page 2 of 99', 1 request.
 
 ## Totals (latest)
 Totals: first load 2 files, 2070 bytes gzip-9 (4437 raw); later by import() 1 file, 10374 bytes gzip-9;

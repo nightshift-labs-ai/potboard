@@ -109,6 +109,10 @@
     vendor sha 4c8da1c8. Not run: kit check, gitleaks, mocked 429.
   - Runtime (01:13Z, 800x500): unknown slug and unknown handle -> 'Not found on make.fun. Retry', 0 page
     errors; deep link leaderboard/2 -> 'Rows 51-100 of 4,924 ranked · Page 2 of 99', 1 request.
+  - Kit check (x_s225 kit, 01:14Z): 4 passed, 0 failed, 16 skipped, exit 0. At submission (operator):
+    .makefun/owner.json not committed yet, commit must be pushed, repo creation time, duplicate check.
+  - Sheet-size estimate (not viewed): shot 2 band labels 11 px x 0.476 = ~5 px on the sheet (values
+    17 px = ~8 px); cover side-pane chips 13 px x 0.6 = ~8 px. Larger labels may wrap the band.
 
 ## Totals (latest)
 Totals: first load 2 files, 2070 bytes gzip-9 (4437 raw); later by import() 1 file, 10374 bytes gzip-9;

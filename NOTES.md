@@ -143,3 +143,29 @@ whole app 3 files, 36686 bytes. Outline decls=14, 1,231 of 1,248 B; names visibl
 - Session 6: shoot.mjs passed two bad sets. At 17:08 shot 3 was the error view ('Failed to fetch'; curl then
   took 15 s for the profile). At 17:10:00 shot 3's avatar was a broken image and shot 2 said 6,119 entries
   vs 6,117 on the cover. Both sets were retaken; the committed shots are the 17:10:17 run.
+
+## Session 7d (2026-11-16, ~01:55-02:03Z)
+- main.ts (a): pre-flight before the build. It scans index.html for <script src> / <link href> and app.js for
+  import('./x') / from './x', then exits 1 with a stderr line naming any file missing from app/ (a ../ path
+  that leaves app/ counts as missing). (b): after the dossier, a first-load line with raw and gzip-9 bytes
+  (each file gzipped on its own, then summed). The caps object and buildDossier call are unchanged. The
+  dossier.json from 4effd48's main.ts and from the new main.ts compared identical (cmp). A temp copy without
+  views.js exited 1 with `app.js -> ./views.js`.
+- shots.json: each entry has a `what`. shoot.mjs prints `file | what | viewport @ dpr | bytes` per shot, and
+  `ONLY=<file>` retakes one shot (an unknown name exits 1 before the browser starts).
+- Board filter (views.js only, so the first load is unchanged): a Filter field at the end of the chip row
+  matches title, slug or category, case-insensitive, through board() + patch() with no request. While
+  active it shows "n of m" (m = rows left by the category chip). `/` focuses it and Escape clears it. A repaint
+  that replaces the field moves focus and the caret to the new one. Playwright check in /tmp (960x600, #/):
+  10/10 passed (18 rows -> 11 for "The", "11 of 18", focus kept, Escape back to 18, no page errors).
+  Import scan: app.js dynamics ['./views.js'] (1 call site), views.js statics ['./app.js']. node --check
+  passed on both files. The outline shows the 4 new declarations last.
+- check.mjs: zero-dependency, `node check.mjs`. It spawns main.ts on temp copies (intact; views.js removed;
+  script src, link href and ../ import broken; an https: link) and prints `check.mjs: 13 passed`. README
+  run section has one line about it.
+- Shots were retaken at 02:01Z (serve.ts --port 8093, BASE set, LD_LIBRARY_PATH as above). They are
+  196,826 / 148,142 / 119,835 B. The cover shows the board beside makefun-frontend-01, the Filter field after
+  the chips, and 10 open rows.
+- Totals: first load 2 files, 2070 bytes gzip-9 (4437 raw); later by import() 1 file, 11085 bytes gzip-9;
+  whole app 3 files, 38733 bytes. main.ts prints `first load index.html+app.js = 4,437 B raw (1,018 + 3,419),
+  2,070 B gzip-9 (612 + 1,458)`.

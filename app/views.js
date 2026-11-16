@@ -524,9 +524,11 @@ const CSS = '*{box-sizing:border-box}a{color:#3b2bd1}:focus-visible{outline:3px 
   + '.ctl{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0}.ctl span{width:12px}aside .ctl{margin:6px 0 0;gap:4px}aside .ctl button{font-size:13px;min-height:26px;padding:0 9px}'
   + '.ctl button{font:inherit;font-size:15px;min-height:34px;padding:0 12px;border:1px solid #d9dce3;'
   + 'border-radius:17px;background:#fff;color:#14171c}.ctl [aria-pressed=true]{background:#3b2bd1;color:#fff}'
-  + '@media(max-width:640px){.ctl button{min-height:44px}}';
+  + '@media(max-width:640px){.ctl button{min-height:44px}}.how{margin:0 0 6px;font-weight:600;color:#14171c}';
 
 document.head.insertAdjacentHTML('beforeend', '<style>' + CSS + '</style>');
+document.querySelector('footer').insertAdjacentHTML('afterbegin', '<p class=how>first load: index.html + app.js · views by '
+  + 'import&#40;) · ETag-revalidated cache · rows patched in place · 50-row pages</p>');
 
 // Paints a view: first from memory (cached data or the cached board item), then the fresh data if it changed.
 export async function show(kind, parts, view, ask, cached, quiet, seq) {

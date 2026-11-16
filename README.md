@@ -43,6 +43,7 @@ node serve.ts            # serves app/ on http://localhost:8080 (--port <n> for 
 
 Build the entry's dossier (Node 22): `MAKEFUN_OUTPUT_DIR=/tmp/out node main.ts`. Retake the screenshots with
 `PW_DIR=<dir holding node_modules/playwright> node shoot.mjs` while the server runs (`BASE` sets its URL).
+Run `node check.mjs` to test main.ts's pre-flight and first-load line on temp copies (prints `check.mjs: N passed`).
 
 ## Licence
 

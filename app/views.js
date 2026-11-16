@@ -30,14 +30,14 @@ ${head('h3')}${shut.map(row).join('')}</details>`;
 
 function bounty(c) {
   const n = c.submissionCount || 0;
-  const fees = Number(c.entryFeesUsd) > 0 ? '<small>incl. ' + money(c.entryFeesUsd)
-    + (c.entryFeePayers ? ' from ' + Number(c.entryFeePayers).toLocaleString('en-US') + ' paid sign-ups' : ' in sign-up fees') + '</small>' : '';
+  const fees = Number(c.entryFeesUsd) > 0 ? '<small>incl. ' + money(c.entryFeesUsd) + ' in entry fees</small>' : '';
+  const paid = c.entryFeePayers ? '<small>' + Number(c.entryFeePayers).toLocaleString('en-US') + ' paid</small>' : '';
   document.title = c.title + ' - Potboard (unofficial)';
   return `<div data-k=h><p class=crumb><a href="#/">Bounties</a> › ${esc(c.title)}</p>
 <h1>${esc(c.title)} ${state(c)}</h1><p class="meta one" title="${esc(c.summary || '')}">${esc(c.summary || '')}</p>
 ${tabs(c.slug, n, false)}</div>
 <div class=facts data-k=f><div><span class=lab>Live pot</span><b>${money(c.potUsd)}</b>${fees}</div>
-<div><span class=lab>Entry fee</span><b>${fee(c.entryFeeUsd)}</b></div>
+<div><span class=lab>Entry fee</span><b>${fee(c.entryFeeUsd)}</b>${paid}</div>
 <div><span class=lab>Time left</span><b data-t=${esc(c.deadline)}>${left(c.deadline)}</b><small>${when(c.deadline, MINZ)}</small></div>
 <div><span class=lab>Entries</span><b>${n.toLocaleString('en-US')}</b></div></div>
 <div class=two data-k=two><section>${rewards(c)}</section><section>${dates(c)}
@@ -74,8 +74,8 @@ function profile(u) {
   return `<div data-k=h><p class=crumb><a href="#/">Bounties</a> › Profile</p>
 <div class=who><img class=av alt="" crossorigin=anonymous src="${esc(avatar(u))}"><div>
 <h1>${esc(u.display_name || u.handle)}</h1><p class=meta>@${esc(u.handle)}${joined(u.joined_at)}</p></div></div></div>
-<div class=tiles data-k=t>${tile('Entered', r.competitions_entered)}${tile('Placed', r.competitions_placed)}
-${tile('Won', r.competitions_won)}${tile('Best place', r.best_placement)}${tile('Prizes', money(r.prize_usd))}</div>
+<div class=tiles data-k=t>${tile('Bounties entered', r.competitions_entered)}${tile('Placed', r.competitions_placed)}
+${tile('Won', r.competitions_won)}${tile('Best place', r.best_placement ? place(r.best_placement) : null)}${tile('Prizes', money(r.prize_usd))}</div>
 <div data-k=s class=pf><h2>${solHead(sol)}, best place first</h2><table class=sol><thead><tr><th>Place</th>
 <th>Bounty / solution</th><th class=num>Score</th><th class=num>Prize</th></tr></thead><tbody>${sol.slice(0, 20).map(solRow).join('')}</tbody></table>
 ${sol.length > 20 ? '<p class=meta>Showing the first 20 of ' + sol.length + '.</p>' : ''}</div>`;

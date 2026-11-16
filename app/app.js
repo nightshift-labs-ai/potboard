@@ -8,8 +8,8 @@ const ROUTES = { // 1 endpoint a view
 async function api(path) { // Map cache + ETag revalidation + in-flight dedupe
   const old = cache.get(path);
   const m = Math.floor(Date.now() / 60000);
-  if (old && old.minute === m) return old.data;
-  if (inflight.has(path)) return inflight.get(path);
+  if (old && old.minute === m) { N.mem++; return old.data; }
+  if (inflight.has(path)) { N.mem++; return inflight.get(path); }
   const p = load(path, old, m);
   inflight.set(path, p);
   try { return await p; } finally { inflight.delete(path); }
@@ -39,8 +39,9 @@ async function route(quiet) {
   const cached = cache.get(path)?.data;
   const turn = !quiet && kind === 'leaderboard' && main.dataset.v === path;
   current = path;
-  if (!quiet) scrollTo(0, 0);
+  if (!quiet) { N.req = N.same = N.mem = 0; scrollTo(0, 0); }
   const ask = cached && turn ? null : api(path);
+  if (!ask) N.mem++;
   ask?.catch(dec);
   await (await views()).show(kind, parts, path, ask, cached, quiet, seq);
   if (seq === gen) window.__shotReady = true;
@@ -59,6 +60,7 @@ function views() {
 
 const cache = new Map();
 const inflight = new Map();
+const N = { req: 0, same: 0, mem: 0 };
 const BASE = 'https://make.fun/api';
 const T = document.createElement('template');
 const main = document.querySelector('main');
@@ -67,19 +69,20 @@ let gen = 0;
 let current = '';
 let timer = 0;
 
-export { ROUTES, cache, patch, main, gen, dec, BASE };
+export { ROUTES, cache, patch, main, gen, dec, BASE, N };
 
 function dec(s) {
   try { return decodeURIComponent(s); } catch { return s; }
 }
 
 async function load(path, old, m) {
+  N.req++;
   let r = await fetch(BASE + path, { cache: 'no-cache' });
   if (!r.ok) r = await (await views()).bad(r, BASE + path);
   const etag = r.headers.get('etag');
-  if (old && etag && old.etag === etag) { old.minute = m; return old.data; }
+  if (old && etag && old.etag === etag) { N.same++; old.minute = m; return old.data; }
   const text = await r.text();
-  if (old && old.text === text) { old.etag = etag; old.minute = m; return old.data; }
+  if (old && old.text === text) { N.same++; old.etag = etag; old.minute = m; return old.data; }
   let data = JSON.parse(text);
   if (data && data.next_cursor) data = await (await views()).more(data, path);
   cache.set(path, { etag, text, data, minute: m });

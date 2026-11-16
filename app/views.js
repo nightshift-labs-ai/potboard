@@ -1,4 +1,4 @@
-import { ROUTES, cache, patch, main, gen, dec, BASE } from './app.js';
+import { ROUTES, cache, patch, main, gen, dec, BASE, N } from './app.js';
 
 function board(data) { // keyed rows patched in place: pot, fee, time left, entries
   const now = Date.now();
@@ -364,7 +364,7 @@ const CSS = '*{box-sizing:border-box}a{color:#3b2bd1}:focus-visible{outline:3px 
   + 'header input{font:inherit;padding:5px 8px;border:1px solid #d9dce3;border-radius:6px;width:9em}'
   + 'header button,.btn{font:inherit;padding:5px 12px;border:0;border-radius:6px;background:#3b2bd1;color:#fff;'
   + 'cursor:pointer;text-decoration:none;display:inline-block}'
-  + '.stamp,.meta,small{color:#4b5563;font-size:15px}.stamp{white-space:nowrap}'
+  + '.stamp,.meta,small{color:#4b5563;font-size:15px}'
   + 'main{max-width:1100px;margin:0 auto;padding:14px 20px 30px}'
   + 'footer{max-width:1100px;margin:0 auto;padding:16px 20px 40px;color:#4b5563;font-size:14px;border-top:1px solid #d9dce3}'
   + 'h1{font-size:28px;margin:4px 0}h2{font-size:22px;margin:18px 0 8px}'
@@ -446,6 +446,7 @@ export async function show(kind, parts, view, ask, cached, quiet, seq) {
   try {
     if (kind !== 'bounty') side();
     early = cached || (kind === 'bounty' && fromBoard(dec(parts[1] || '')));
+    if (kind !== 'board' && fromBoard(dec(parts[1] || ''))) N.mem++;
     if (early) paint(kind, early, parts, view);
     else if (!quiet) main.innerHTML = '<p class=note>Loading...</p>';
     let data = early;
@@ -460,6 +461,7 @@ export async function show(kind, parts, view, ask, cached, quiet, seq) {
     fail(e, Boolean(early));
     side();
   }
+  stamp();
 }
 
 // Delegated listeners: the retry link re-runs the route; the header form opens a profile.
@@ -488,7 +490,8 @@ function paint(kind, data, parts, view) {
 }
 
 function stamp() {
-  document.querySelector('.stamp').textContent = 'updated ' + new Date().toISOString().slice(11, 16) + ' UTC';
+  document.querySelector('.stamp').textContent = 'updated ' + new Date().toISOString().slice(11, 16) + ' UTC'
+    + ' · this view: ' + say(N.req, 'API request') + ' · ' + N.same + ' unchanged (ETag) · ' + N.mem + ' from memory';
 }
 
 function fail(e, keep) {
@@ -505,6 +508,7 @@ export async function bad(r, url) {
   if (r.status === 429) {
     const s = Math.min(60, Number(r.headers.get('retry-after')) || 5);
     await new Promise((ok) => setTimeout(ok, s * 1000));
+    N.req++;
     r = await fetch(url, { cache: 'no-cache' });
   }
   if (!r.ok) throw new Error(r.status === 404 ? 'not found' : 'HTTP ' + r.status);
@@ -517,6 +521,7 @@ export async function more(data, path) {
   const items = data.items.slice();
   let cursor = data.next_cursor;
   for (let i = 0; cursor && i < 5; i++) {
+    N.req++;
     const r = await fetch(BASE + path + '&cursor=' + encodeURIComponent(cursor), { cache: 'no-cache' });
     if (!r.ok) break;
     const page = await r.json();

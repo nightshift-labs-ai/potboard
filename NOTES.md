@@ -65,17 +65,21 @@
   a page), profile, pager, rewards. Branch Totals: first load 2 files, 2730 B gzip-9 (6287 raw); later 7862 B;
   whole 30239 B. NOT render-tested in a browser; cover not compared.
 
+- Session A2 (2026-11-16, ~11 min): render-tested `session-a-wip` against 57f1f89 (both served from localhost,
+  Playwright script in /tmp): #/ -> makefun-frontend-01 at 1280x800 gives 629 elements on both, 0 diffs in box,
+  font, color, background and display, so the cover is unchanged. Board and leaderboard render with 0 page
+  errors. Profile failed once with net::ERR_NETWORK_CHANGED (transient; it was not retried). Checkpoint ok (node
+  --check both; one import('./views.js') in app.js; outline 1,229 B). Merged into main with --no-ff. No shots taken.
+
 ## Totals (latest)
-Totals: first load 2 files, 5108 bytes gzip-9 (13173 raw); later by import() 1 file, 5835 bytes gzip-9;
-whole app 3 files, 29829 bytes. Outline decls=14, 1,216 of 1,248 B; names visible: ROUTES (1 endpoint a view;
-board, bounty, leaderboard, profile), api (Map cache + ETag revalidation + in-flight dedupe), board (keyed rows
-patched in place: pot, fee, time left, entries), views.js bounty, leaderboard (50 rows a page), profile, pager,
-rewards, dates.
+Totals: first load 2 files, 2730 bytes gzip-9 (6287 raw); later by import() 1 file, 7862 bytes gzip-9;
+whole app 3 files, 30239 bytes. Outline decls=14, 1,229 of 1,248 B; names visible: ROUTES + 4 members, api
+(Map cache + ETag revalidation + in-flight dedupe), patch, views board (keyed rows...), bounty, leaderboard
+(50 rows a page), profile, pager, rewards.
 
 ## Next
-- Session B first: on `session-a-wip`, render-test #/ -> bounty at 1280 (cover unchanged? pane + highlighted row),
-  leaderboard, profile, 390x844; then cut app.js from 2,730 B to <=1,900 B gzip-9 (app.js is 5,297 raw: candidates
-  are moving fail/paint/load's 429+more branches into views.js); then merge into main by fast-forward.
+- Item 1 rest: cut app.js from 2,730 B to <=1,900 B gzip-9 (candidates: move fail/paint and load's 429+more
+  branches into views.js); re-render the profile and 390x844; re-run the layout diff of the cover.
 - Item 2 (outline order: app.js api line first, then ROUTES + 4 members, then the counter; views.js board,
   bounty, leaderboard, profile, helpers) and item 3 (per-view counter 'this view: N API request(s) · N unchanged
   (ETag) · N from memory', reset on non-quiet route only, never '304') are NOT started.

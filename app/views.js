@@ -1,4 +1,4 @@
-import { ROUTES, cache, patch } from './app.js';
+import { ROUTES, cache, patch, main, gen, dec, BASE } from './app.js';
 
 function board(data) { // keyed rows patched in place: pot, fee, time left, entries
   const now = Date.now();
@@ -438,19 +438,86 @@ const CSS = '*{box-sizing:border-box}a{color:#3b2bd1}:focus-visible{outline:3px 
 
 document.head.insertAdjacentHTML('beforeend', '<style>' + CSS + '</style>');
 
-// On HTTP 429: wait for Retry-After (5 s if absent, 60 s at most), then ask once more.
-export async function later(r, get) {
-  const s = Math.min(60, Number(r.headers.get('retry-after')) || 5);
-  await new Promise((ok) => setTimeout(ok, s * 1000));
-  return get();
+// Paints a view: first from memory (cached data or the cached board item), then the fresh data if it changed.
+export async function show(kind, parts, view, ask, cached, quiet, seq) {
+  if (seq !== gen) return;
+  for (const a of document.querySelectorAll('[data-nav]')) a.toggleAttribute('aria-current', kind === 'board');
+  let early = cached;
+  try {
+    if (kind !== 'bounty') side();
+    early = cached || (kind === 'bounty' && fromBoard(dec(parts[1] || '')));
+    if (early) paint(kind, early, parts, view);
+    else if (!quiet) main.innerHTML = '<p class=note>Loading...</p>';
+    let data = early;
+    if (ask) {
+      data = await ask;
+      if (seq !== gen) return;
+      if (data !== early) paint(kind, data, parts, view);
+    }
+    side(kind === 'bounty' && data);
+  } catch (e) {
+    if (seq !== gen) return;
+    fail(e, Boolean(early));
+    side();
+  }
 }
 
-// The board's later pages, fetched only when the first page names a next_cursor (at most 5 more).
-export async function more(data, url) {
+// Delegated listeners: the retry link re-runs the route; the header form opens a profile.
+export function click(e) {
+  if (!e.target.closest('[data-retry]')) return;
+  e.preventDefault();
+  dispatchEvent(new HashChangeEvent('hashchange'));
+}
+
+export function find(e) {
+  e.preventDefault();
+  const h = e.target.elements.h.value.trim().replace(/^@/, '');
+  if (h) location.hash = '#/u/' + encodeURIComponent(h);
+}
+
+// The minute tick: the stamp and every time-left text node, nothing else.
+export function tock() {
+  stamp();
+  for (const el of document.querySelectorAll('[data-t]')) el.textContent = left(el.dataset.t);
+}
+
+function paint(kind, data, parts, view) {
+  const views = { board, bounty, leaderboard, profile };
+  patch(main, views[kind](data, Number(parts[3]) || 1, fromBoard(dec(parts[1] || ''))), view);
+  stamp();
+}
+
+function stamp() {
+  document.querySelector('.stamp').textContent = 'updated ' + new Date().toISOString().slice(11, 16) + ' UTC';
+}
+
+function fail(e, keep) {
+  const why = esc(e && e.message);
+  const msg = why === 'not found' ? 'Not found on make.fun.' : 'Could not load from make.fun (' + why + ').';
+  const note = '<p class=note data-k=err>' + msg + ' <a href="" data-retry>Retry</a></p>';
+  if (keep) main.insertAdjacentHTML('afterbegin', note);
+  else { main.innerHTML = note; main.dataset.v = ''; document.title = 'Error - Potboard (unofficial)'; }
+}
+
+// A response that is not ok: on HTTP 429 wait for Retry-After (5 s if absent, 60 s at most) and ask
+// once more; anything still not ok becomes an error.
+export async function bad(r, url) {
+  if (r.status === 429) {
+    const s = Math.min(60, Number(r.headers.get('retry-after')) || 5);
+    await new Promise((ok) => setTimeout(ok, s * 1000));
+    r = await fetch(url, { cache: 'no-cache' });
+  }
+  if (!r.ok) throw new Error(r.status === 404 ? 'not found' : 'HTTP ' + r.status);
+  return r;
+}
+
+// The board's later pages, fetched only when its first page names a next_cursor (at most 5 more).
+export async function more(data, path) {
+  if (path !== ROUTES.board()) return data;
   const items = data.items.slice();
   let cursor = data.next_cursor;
   for (let i = 0; cursor && i < 5; i++) {
-    const r = await fetch(url + '&cursor=' + encodeURIComponent(cursor), { cache: 'no-cache' });
+    const r = await fetch(BASE + path + '&cursor=' + encodeURIComponent(cursor), { cache: 'no-cache' });
     if (!r.ok) break;
     const page = await r.json();
     items.push(...page.items);

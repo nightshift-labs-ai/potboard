@@ -5,19 +5,23 @@ function board(data) { // keyed rows patched in place: pot, fee, time left, entr
   const open = [];
   const soon = [];
   const shut = [];
+  const cats = [...new Set(data.items.map((b) => b.category).filter(Boolean))].sort();
   for (const b of data.items) {
+    if (cat && b.category !== cat) continue;
     if (Date.parse(b.publishedAt) > now) soon.push(b);
     else if (Date.parse(b.deadline) > now) open.push(b);
     else shut.push(b);
   }
   open.sort((a, b) => Date.parse(a.deadline) - Date.parse(b.deadline));
   soon.sort((a, b) => Date.parse(a.publishedAt) - Date.parse(b.publishedAt));
+  if (sort !== 'end') for (const g of [open, soon, shut]) g.sort(order);
   let pot = 0;
   let n = 0;
   for (const b of open) { pot += Number(b.potUsd) || 0; n += b.submissionCount || 0; }
   document.title = 'Bounties - Potboard (unofficial make.fun frontend)';
   return `<p class=strip data-k=strip><b>${open.length}</b> taking entries · <b>${money(pot)}</b>
  in live pots · <b>${n.toLocaleString('en-US')}</b> entries</p>
+<div class=ctl data-k=ctl>${SORTS.map(pickSort).join('')}<span></span>${['', ...cats].map(pickCat).join('')}</div>
 <h2 data-k=h1>Taking entries (${open.length})</h2>${head('h1')}${open.map(row).join('')}
 <h2 data-k=h2>Opening soon (${soon.length})</h2>${head('h2')}${soon.map(row).join('')}
 <details data-k=x><summary>Closed, awaiting results (${shut.length})</summary>
@@ -117,6 +121,10 @@ function dates(c) {
 }
 
 const merged = new WeakMap();
+const SORTS = [['end', 'Closing soon'], ['pot', 'Biggest pot'], ['n', 'Most entries']];
+let sort = 'end';
+let last = null;
+let cat = '';
 const TICK = new RegExp('\x60([^\x60]+)\x60', 'g');
 const LINK = new RegExp('\\[([^\\]]+)\\]\\((https://[^)\\s]+)\\)', 'g');
 
@@ -270,6 +278,7 @@ function side(d) {
   const b = d && innerWidth >= 1100 && cache.get(ROUTES.board())?.data;
   const aside = document.querySelector('aside');
   document.body.classList.toggle('sp', Boolean(b));
+  last = b && d;
   if (!b) return aside.replaceChildren();
   const i = b.items.findIndex((x) => x.slug === d.slug);
   if (i >= 0) b.items[i] = d;
@@ -282,6 +291,28 @@ function side(d) {
 function fromBoard(slug) {
   const b = cache.get(ROUTES.board())?.data;
   return b ? b.items.find((x) => x.slug === slug) || null : null;
+}
+
+// Board controls: sort and category, applied by board() and patch() with no request.
+function pickSort(o) {
+  return '<button type=button data-s=' + o[0] + ' aria-pressed=' + (sort === o[0]) + '>' + o[1] + '</button>';
+}
+
+function pickCat(c) {
+  return '<button type=button data-c="' + esc(c) + '" aria-pressed=' + (cat === c) + '>' + (esc(c) || 'All') + '</button>';
+}
+
+function order(a, b) {
+  return sort === 'pot' ? (Number(b.potUsd) || 0) - (Number(a.potUsd) || 0)
+    : (b.submissionCount || 0) - (a.submissionCount || 0);
+}
+
+function choose(el) {
+  if (el.dataset.s) sort = el.dataset.s;
+  else cat = el.dataset.c;
+  const d = cache.get(ROUTES.board())?.data;
+  if (d && main.dataset.v === ROUTES.board()) patch(main, board(d), main.dataset.v);
+  else if (last) side(last);
 }
 
 function head(k) {
@@ -434,7 +465,11 @@ const CSS = '*{box-sizing:border-box}a{color:#3b2bd1}:focus-visible{outline:3px 
   + '@media(max-width:640px){.facts,.tiles{grid-template-columns:1fr 1fr}.facts b{font-size:26px}'
   + 'table,tbody,tr,td{display:block}thead{display:none}tr{border-bottom:1px solid #d9dce3;padding:4px 0}'
   + 'td::before{content:attr(data-l) ": ";color:#4b5563;font-size:13px;text-transform:uppercase}'
-  + '.tabs a{display:grid;min-height:44px}}';
+  + '.tabs a{display:grid;min-height:44px}}'
+  + '.ctl{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0}.ctl span{width:12px}aside .ctl{margin:6px 0 0;gap:4px}aside .ctl button{font-size:13px;min-height:26px;padding:0 9px}'
+  + '.ctl button{font:inherit;font-size:15px;min-height:34px;padding:0 12px;border:1px solid #d9dce3;'
+  + 'border-radius:17px;background:#fff;color:#14171c}.ctl [aria-pressed=true]{background:#3b2bd1;color:#fff}'
+  + '@media(max-width:640px){.ctl button{min-height:44px}}';
 
 document.head.insertAdjacentHTML('beforeend', '<style>' + CSS + '</style>');
 
@@ -466,6 +501,8 @@ export async function show(kind, parts, view, ask, cached, quiet, seq) {
 
 // Delegated listeners: the retry link re-runs the route; the header form opens a profile.
 export function click(e) {
+  const pick = e.target.closest('[data-s],[data-c]');
+  if (pick) return choose(pick);
   if (!e.target.closest('[data-retry]')) return;
   e.preventDefault();
   dispatchEvent(new HashChangeEvent('hashchange'));

@@ -13,9 +13,18 @@ const { chromium } = require('playwright');
 const shots = JSON.parse(readFileSync(join(here, 'shots.json'), 'utf8'));
 const LIMIT = 262144;
 
+// ONLY=<shot file name> retakes just that shot; an unknown name stops before the browser starts.
+const only = process.env.ONLY || '';
+const todo = only ? shots.filter((s) => s.file === only) : shots;
+if (only && !todo.length) {
+  console.error('shoot.mjs: ONLY=' + only + ' matches no file in shots.json (' + shots.map((s) => s.file).join(', ') + ')');
+  process.exit(1);
+}
+
+const done = [];
 const browser = await chromium.launch();
 try {
-  for (const s of shots) {
+  for (const s of todo) {
     const context = await browser.newContext({ viewport: s.viewport, deviceScaleFactor: s.dpr });
     const page = await context.newPage();
     const errors = [];
@@ -50,7 +59,11 @@ try {
     if (size > LIMIT) throw new Error(s.file + ' is ' + size + ' B, over 256 KiB');
     console.log(s.file, (s.via ? s.via + ' -> ' : '') + s.path, s.viewport.width + 'x' + s.viewport.height + '@' + s.dpr, size + ' B');
     await context.close();
+    done.push(s.file + ' | ' + (s.what || '(no what)') + ' | ' + s.viewport.width + 'x' + s.viewport.height
+      + ' @ ' + s.dpr + ' | ' + size.toString().replace(/\B(?=(\d{3})+$)/g, ',') + ' B');
   }
 } finally {
   await browser.close();
 }
+// One line a shot taken in this run: file | what it proves | CSS viewport @ DPR | bytes.
+for (const line of done) console.log(line);

@@ -4,47 +4,7 @@
 <meta charset=utf-8>
 <meta name=viewport content="width=device-width">
 <title>Potboard - unofficial make.fun bounty board</title>
-<style>
-*{box-sizing:border-box}
-body{margin:0;background:#fbfaf7;color:#14171c;font:16px/1.45 -apple-system,'Segoe UI','Ubuntu Sans',Ubuntu,sans-serif;font-variant-numeric:tabular-nums}
-a{color:#3b2bd1}
-:focus-visible{outline:3px solid #3b2bd1;outline-offset:2px}
-header{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;padding:8px 20px;background:#fff;border-bottom:1px solid #d9dce3;font-size:15px}
-header .wm{font-weight:800;font-size:20px;color:#14171c;text-decoration:none}
-.tag{font-size:12px;text-transform:uppercase;letter-spacing:.04em;background:#eceef2;color:#3f4753;padding:2px 6px;border-radius:4px;margin-left:6px;font-weight:600}
-header nav{display:flex;gap:12px;align-items:center;flex:1}
-header form{display:flex;gap:6px;align-items:center}
-header input{font:inherit;padding:5px 8px;border:1px solid #d9dce3;border-radius:6px;width:9em}
-header button,.btn{font:inherit;padding:5px 12px;border:0;border-radius:6px;background:#3b2bd1;color:#fff;cursor:pointer;text-decoration:none;display:inline-block}
-.stamp,.meta,small{color:#4b5563;font-size:15px}.stamp{white-space:nowrap}
-main{max-width:1100px;margin:0 auto;padding:14px 20px 30px}
-footer{max-width:1100px;margin:0 auto;padding:16px 20px 40px;color:#4b5563;font-size:14px;border-top:1px solid #d9dce3}
-h1{font-size:28px;margin:4px 0}h2{font-size:22px;margin:18px 0 8px}
-.strip{background:#fff;border:1px solid #d9dce3;border-radius:8px;padding:8px 14px;font-size:17px}
-.hd,.row{display:grid;grid-template-columns:1fr 130px 110px 140px 90px;gap:10px;align-items:center;padding:6px 14px}
-.hd{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:#4b5563;font-weight:700}
-.hd span,.row>b{text-align:right}
-.row{background:#fff;border:1px solid #d9dce3;border-top:0;color:inherit;text-decoration:none;min-height:56px}
-.row:nth-of-type(even){background:#f4f5f7}
-.row:hover .t{text-decoration:underline}
-.row .t{font-size:18px;font-weight:650;color:#3b2bd1}
-.row>b{font-size:24px;font-weight:700}
-.row>b:first-of-type{background:#eef8f1;border-radius:6px;padding:0 6px}
-.row>b small{display:block;font-size:13px;font-weight:400}
-.chip{display:inline-block;font-size:14px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ddf3e4;color:#0e5a2e;white-space:nowrap}
-.c24{background:#fde7b0;color:#5c3d00}.c1{background:#fddcdc;color:#8f1d1d}.cx{background:#eceef2;color:#3f4753}.cs{background:#dbeafe;color:#1e3a8a}
-.note{background:#fff;border:1px solid #d9dce3;border-radius:8px;padding:12px 14px}
-details{margin:6px 0}summary{cursor:pointer;font-weight:650;min-height:32px}
-@media(max-width:640px){
-main,header{padding-left:12px;padding-right:12px}
-header nav{flex-wrap:wrap}header form{flex:1 1 100%}header input{flex:1;min-width:0}
-.hd{display:none}
-.row{grid-template-columns:1fr 1fr;border:1px solid #d9dce3;border-radius:8px;margin-bottom:8px}
-.row>div{grid-column:1/-1}.row>b{text-align:left;font-size:20px}
-.row>b::before{content:attr(data-l);display:block;font-size:13px;text-transform:uppercase;color:#4b5563}
-a,button{min-height:44px}header nav a,header form{display:flex;align-items:center}
-}
-</style>
+<style>body{margin:0;background:#fbfaf7;color:#14171c;font:16px/1.45 -apple-system,'Segoe UI','Ubuntu Sans',Ubuntu,sans-serif;font-variant-numeric:tabular-nums}</style>
 <script type=module src=app.js></script>
 </head>
 <body>

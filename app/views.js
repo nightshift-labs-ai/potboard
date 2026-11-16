@@ -20,7 +20,7 @@ function board(data) { // keyed rows patched in place: pot, fee, time left, entr
   for (const b of open) { pot += Number(b.potUsd) || 0; n += b.submissionCount || 0; }
   document.title = 'Bounties - Potboard (unofficial make.fun frontend)';
   return `<p class=strip data-k=strip><b>${open.length}</b> taking entries · <b>${money(pot)}</b>
- in live pots · <b>${n.toLocaleString('en-US')}</b> entries</p>
+ in live pots · <b>${n.toLocaleString('en-US')}</b> entries${soonest(open)}</p>
 <div class=ctl data-k=ctl>${SORTS.map(pickSort).join('')}<span></span>${['', ...cats].map(pickCat).join('')}</div>
 <h2 data-k=h1>Taking entries (${open.length})</h2>${head('h1')}${open.map(row).join('')}
 <h2 data-k=h2>Opening soon (${soon.length})</h2>${head('h2')}${soon.map(row).join('')}
@@ -34,7 +34,7 @@ function bounty(c) {
     + (c.entryFeePayers ? ' from ' + Number(c.entryFeePayers).toLocaleString('en-US') + ' paid sign-ups' : ' in sign-up fees') + '</small>' : '';
   document.title = c.title + ' - Potboard (unofficial)';
   return `<div data-k=h><p class=crumb><a href="#/">Bounties</a> › ${esc(c.title)}</p>
-<h1>${esc(c.title)} ${chip(c, true)}</h1><p class="meta one" title="${esc(c.summary || '')}">${esc(c.summary || '')}</p>
+<h1>${esc(c.title)} ${state(c)}</h1><p class="meta one" title="${esc(c.summary || '')}">${esc(c.summary || '')}</p>
 ${tabs(c.slug, n, false)}</div>
 <div class=facts data-k=f><div><span class=lab>Live pot</span><b>${money(c.potUsd)}</b>${fees}</div>
 <div><span class=lab>Entry fee</span><b>${fee(c.entryFeeUsd)}</b></div>
@@ -316,7 +316,7 @@ function choose(el) {
 }
 
 function head(k) {
-  return '<div class=hd data-k=' + k + '><span></span><span>Live pot</span><span>Entry fee</span>'
+  return '<div class=hd data-k=' + k + '><span></span><span>Live pot</span><span>Fee</span>'
     + '<span>Time left</span><span>Entries</span></div>';
 }
 
@@ -325,7 +325,7 @@ function row(b) {
   return `<a class=row data-k=${esc(b.slug)} href="${link(b.slug)}"><div><span class=t>${esc(b.title)}</span>
 <br><small>${esc(b.category)} · ${esc(b.sponsor && b.sponsor.name)} · ${say(places, 'place')}</small></div>
 <b data-l="Live pot">${money(b.potUsd)}</b><b data-l="Entry fee">${fee(b.entryFeeUsd)}</b>
-<b data-l="Time left">${chip(b)}</b><b data-l=Entries>${(b.submissionCount || 0).toLocaleString('en-US')}</b></a>`;
+<b data-l="Time left">${due(b)}</b><b data-l=Entries>${(b.submissionCount || 0).toLocaleString('en-US')}</b></a>`;
 }
 
 function esc(s) {
@@ -357,6 +357,37 @@ function chip(c, long) {
   const ms = end - now;
   const cls = !(ms > 0) ? 'cx' : ms < 3600000 ? 'c1' : ms < 86400000 ? 'c24' : '';
   return '<span class="chip ' + cls + '" title="' + esc(c.deadline) + ' (UTC)" data-t=' + esc(c.deadline) + '>' + left(c.deadline) + '</span>';
+}
+
+// Time left on a board row: bold text (amber under 24 h, red under 1 h) over a bar showing how much
+// of the span from opening to the deadline has passed. A bounty not open yet keeps its Opens chip.
+function due(b) {
+  const now = Date.now();
+  const end = Date.parse(b.deadline);
+  const at = Date.parse(b.opensAt || b.publishedAt);
+  if (at > now) return chip(b);
+  const ms = end - now;
+  const cls = !(ms > 0) ? 'cx' : ms < 3600000 ? 'r1' : ms < 86400000 ? 'r24' : '';
+  const done = Math.round(Math.min(1, Math.max(0, (now - at) / (end - at))) * 100) || 0;
+  return '<span class="due ' + cls + '" title="' + esc(b.deadline) + ' (UTC)" data-t=' + esc(b.deadline) + '>'
+    + left(b.deadline) + '</span><i class="bar ' + cls + '"><i style="width:' + done + '%"></i></i>';
+}
+
+// The bounty page status: from opensAt/publishedAt, acceptingSubmissions and the deadline.
+function state(c) {
+  const now = Date.now();
+  const end = Date.parse(c.deadline);
+  const at = Date.parse(c.opensAt || c.publishedAt);
+  if (at > now || (c.acceptingSubmissions === false && end > now)) return chip(c, true);
+  if (!(end > now)) return '<span class="chip cx">Closed, awaiting results</span>';
+  return '<span class=chip>Taking entries · closes ' + when(c.deadline, MIN) + ' UTC</span>';
+}
+
+function soonest(open) {
+  const t = Math.min(...open.map((b) => Date.parse(b.deadline)).filter((x) => x > 0));
+  if (!(t < Infinity)) return '';
+  const iso = new Date(t).toISOString();
+  return ' · next deadline <b data-t=' + iso + '>' + left(iso) + '</b>';
 }
 
 function fee(v) {
@@ -410,6 +441,9 @@ const CSS = '*{box-sizing:border-box}a{color:#3b2bd1}:focus-visible{outline:3px 
   + '.row>b small{display:block;font-size:13px;font-weight:400}'
   + '.chip{display:inline-block;font-size:14px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ddf3e4;'
   + 'color:#0e5a2e;white-space:nowrap}'
+  + '.due{font-weight:700}.due.r24{color:#7a4a00}.due.r1{color:#a01b1b}.due.cx{color:#3f4753}'
+  + '.bar{display:block;height:4px;margin:3px 0 0 auto;max-width:96px;background:#eceef2;border-radius:2px}'
+  + '.bar i{display:block;height:100%;background:#8b93a1;border-radius:2px}.bar.r24 i{background:#e8a317}.bar.r1 i{background:#d92d20}'
   + '.c24{background:#fde7b0;color:#5c3d00}.c1{background:#fddcdc;color:#8f1d1d}.cx{background:#eceef2;color:#3f4753}'
   + '.cs{background:#dbeafe;color:#1e3a8a}'
   + '.note{background:#fff;border:1px solid #d9dce3;border-radius:8px;padding:12px 14px}'

@@ -71,15 +71,24 @@
   errors. Profile failed once with net::ERR_NETWORK_CHANGED (transient; it was not retried). Checkpoint ok (node
   --check both; one import('./views.js') in app.js; outline 1,229 B). Merged into main with --no-ff. No shots taken.
 
+- Session A3 (2026-11-16, ~11 min), commit 17863f1: item 1 continued. views.js gained show (paints from memory,
+  then the fresh data), paint, stamp, fail, tock (minute-tick text), click/find (listener bodies), bad (429 wait
+  + retry, errors) and more (checks the board path itself). app.js keeps ROUTES, api, patch, route, tick, views,
+  load and one-line listeners that call V. The main view key is now the API path; index.html's main starts with
+  Loading. Checkpoint ok (node --check both; import scan app.js dyn ['./views.js'] x1, views.js static
+  ['./app.js']; outline 1,230 B, 14 decls). Smoke render on localhost:8091: #/ at 1280 (18 rows), a bounty at
+  1280, a profile at 390x844; all reached __shotReady with 0 page errors, no error note, no horizontal scroll.
+  NOT done: the cover layout compare against 57f1f89, a mocked-429 retest. Items 2 and 3 not started.
+
 ## Totals (latest)
-Totals: first load 2 files, 2730 bytes gzip-9 (6287 raw); later by import() 1 file, 7862 bytes gzip-9;
-whole app 3 files, 30239 bytes. Outline decls=14, 1,229 of 1,248 B; names visible: ROUTES + 4 members, api
+Totals: first load 2 files, 2007 bytes gzip-9 (4285 raw); later by import() 1 file, 8778 bytes gzip-9;
+whole app 3 files, 30800 bytes. Outline decls=14, 1,230 of 1,248 B; names visible: ROUTES + 4 members, api
 (Map cache + ETag revalidation + in-flight dedupe), patch, views board (keyed rows...), bounty, leaderboard
 (50 rows a page), profile, pager, rewards.
 
 ## Next
-- Item 1 rest: cut app.js from 2,730 B to <=1,900 B gzip-9 (candidates: move fail/paint and load's 429+more
-  branches into views.js); re-render the profile and 390x844; re-run the layout diff of the cover.
+- Item 1 rest: 2,007 -> <=1,900 B (index.html 623 + app.js 1,403 gz). Candidates: compact patch, move the
+  turn/scroll logic into show, shorten the index title. Then the cover layout compare vs 57f1f89 (629 elements).
 - Item 2 (outline order: app.js api line first, then ROUTES + 4 members, then the counter; views.js board,
   bounty, leaderboard, profile, helpers) and item 3 (per-view counter 'this view: N API request(s) · N unchanged
   (ETag) · N from memory', reset on non-quiet route only, never '304') are NOT started.

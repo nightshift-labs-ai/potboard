@@ -1,4 +1,28 @@
-import { esc, money, left, chip, fee, link } from './app.js';
+import { ROUTES, cache, patch } from './app.js';
+
+function board(data) { // keyed rows patched in place: pot, fee, time left, entries
+  const now = Date.now();
+  const open = [];
+  const soon = [];
+  const shut = [];
+  for (const b of data.items) {
+    if (Date.parse(b.publishedAt) > now) soon.push(b);
+    else if (Date.parse(b.deadline) > now) open.push(b);
+    else shut.push(b);
+  }
+  open.sort((a, b) => Date.parse(a.deadline) - Date.parse(b.deadline));
+  soon.sort((a, b) => Date.parse(a.publishedAt) - Date.parse(b.publishedAt));
+  let pot = 0;
+  let n = 0;
+  for (const b of open) { pot += Number(b.potUsd) || 0; n += b.submissionCount || 0; }
+  document.title = 'Bounties - Potboard (unofficial make.fun frontend)';
+  return `<p class=strip data-k=strip><b>${open.length}</b> taking entries · <b>${money(pot)}</b>
+ in live pots · <b>${n.toLocaleString('en-US')}</b> entries</p>
+<h2 data-k=h1>Taking entries (${open.length})</h2>${head('h1')}${open.map(row).join('')}
+<h2 data-k=h2>Opening soon (${soon.length})</h2>${head('h2')}${soon.map(row).join('')}
+<details data-k=x><summary>Closed, awaiting results (${shut.length})</summary>
+${head('h3')}${shut.map(row).join('')}</details>`;
+}
 
 function bounty(c) {
   const n = c.submissionCount || 0;
@@ -242,13 +266,130 @@ function joined(iso) {
   return iso ? ' · joined ' + when(iso, DAY) : '';
 }
 
-export { bounty, leaderboard, profile };
+function side(d) {
+  const b = d && innerWidth >= 1100 && cache.get(ROUTES.board())?.data;
+  const aside = document.querySelector('aside');
+  document.body.classList.toggle('sp', Boolean(b));
+  if (!b) return aside.replaceChildren();
+  const i = b.items.findIndex((x) => x.slug === d.slug);
+  if (i >= 0) b.items[i] = d;
+  const t = document.title;
+  patch(aside, board(b), 'board');
+  document.title = t;
+  for (const a of aside.querySelectorAll('.row')) if (a.dataset.k === d.slug) a.setAttribute('aria-current', 'page');
+}
+
+function fromBoard(slug) {
+  const b = cache.get(ROUTES.board())?.data;
+  return b ? b.items.find((x) => x.slug === slug) || null : null;
+}
+
+function head(k) {
+  return '<div class=hd data-k=' + k + '><span></span><span>Live pot</span><span>Entry fee</span>'
+    + '<span>Time left</span><span>Entries</span></div>';
+}
+
+function row(b) {
+  const places = b.rewardsNow ? b.rewardsNow.length : 0;
+  return `<a class=row data-k=${esc(b.slug)} href="${link(b.slug)}"><div><span class=t>${esc(b.title)}</span>
+<br><small>${esc(b.category)} · ${esc(b.sponsor && b.sponsor.name)} · ${say(places, 'place')}</small></div>
+<b data-l="Live pot">${money(b.potUsd)}</b><b data-l="Entry fee">${fee(b.entryFeeUsd)}</b>
+<b data-l="Time left">${chip(b)}</b><b data-l=Entries>${(b.submissionCount || 0).toLocaleString('en-US')}</b></a>`;
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, ent);
+}
+
+function money(v) {
+  const n = Number(v) || 0;
+  return '$' + n.toLocaleString('en-US', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 });
+}
+
+function left(iso) {
+  const ms = Date.parse(iso) - Math.floor(Date.now() / 60000) * 60000;
+  if (!(ms > 0)) return 'Closed';
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor(ms / 60000) % 60;
+  return h >= 48 ? Math.floor(h / 24) + 'd ' + (h % 24) + 'h' : h ? h + 'h ' + m + 'm' : m + 'm';
+}
+
+function chip(c, long) {
+  const now = Date.now();
+  const end = Date.parse(c.deadline);
+  const at = c.opensAt || c.publishedAt;
+  const opens = Date.parse(at);
+  if (opens > now || (c.acceptingSubmissions === false && end > now)) {
+    const txt = long || !(opens > now) ? 'Opens ' + utc(opens) : 'Opens in ' + left(at);
+    return '<span class="chip cs" title="' + esc(at) + ' (UTC)">' + txt + '</span>';
+  }
+  const ms = end - now;
+  const cls = !(ms > 0) ? 'cx' : ms < 3600000 ? 'c1' : ms < 86400000 ? 'c24' : '';
+  return '<span class="chip ' + cls + '" title="' + esc(c.deadline) + ' (UTC)" data-t=' + esc(c.deadline) + '>' + left(c.deadline) + '</span>';
+}
+
+function fee(v) {
+  return v == null || Number(v) === 0 ? 'Free' : money(v);
+}
+
+function link(slug) {
+  return '#/bounty/' + encodeURIComponent(slug);
+}
+
+function say(n, w) {
+  return n.toLocaleString('en-US') + ' ' + w + (n === 1 ? '' : 's');
+}
+
+function ent(c) {
+  return '&#' + c.charCodeAt(0) + ';';
+}
+
+function utc(t) {
+  return t > 0 ? new Date(t).toISOString().slice(0, 16).replace('T', ' ') + ' UTC' : 'soon';
+}
+
+export { board, bounty, leaderboard, profile, side, fromBoard, left };
 
 const DAY = { timeZone: 'UTC', day: 'numeric', month: 'short' };
 const MIN = { ...DAY, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' };
 const MINZ = { ...MIN, timeZoneName: 'short' };
 
-const CSS = '.crumb{font-size:15px;margin:0 0 4px}'
+const CSS = '*{box-sizing:border-box}a{color:#3b2bd1}:focus-visible{outline:3px solid #3b2bd1;outline-offset:2px}'
+  + 'header{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;padding:8px 20px;background:#fff;'
+  + 'border-bottom:1px solid #d9dce3;font-size:15px}'
+  + 'header .wm{font-weight:800;font-size:20px;color:#14171c;text-decoration:none}'
+  + '.tag{font-size:12px;text-transform:uppercase;letter-spacing:.04em;background:#eceef2;color:#3f4753;padding:2px 6px;'
+  + 'border-radius:4px;margin-left:6px;font-weight:600}'
+  + 'header nav{display:flex;gap:12px;align-items:center;flex:1}header form{display:flex;gap:6px;align-items:center}'
+  + 'header input{font:inherit;padding:5px 8px;border:1px solid #d9dce3;border-radius:6px;width:9em}'
+  + 'header button,.btn{font:inherit;padding:5px 12px;border:0;border-radius:6px;background:#3b2bd1;color:#fff;'
+  + 'cursor:pointer;text-decoration:none;display:inline-block}'
+  + '.stamp,.meta,small{color:#4b5563;font-size:15px}.stamp{white-space:nowrap}'
+  + 'main{max-width:1100px;margin:0 auto;padding:14px 20px 30px}'
+  + 'footer{max-width:1100px;margin:0 auto;padding:16px 20px 40px;color:#4b5563;font-size:14px;border-top:1px solid #d9dce3}'
+  + 'h1{font-size:28px;margin:4px 0}h2{font-size:22px;margin:18px 0 8px}'
+  + '.strip{background:#fff;border:1px solid #d9dce3;border-radius:8px;padding:8px 14px;font-size:17px}'
+  + '.hd,.row{display:grid;grid-template-columns:1fr 130px 110px 140px 90px;gap:10px;align-items:center;padding:6px 14px}'
+  + '.hd{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:#4b5563;font-weight:700}'
+  + '.hd span,.row>b{text-align:right}'
+  + '.row{background:#fff;border:1px solid #d9dce3;border-top:0;color:inherit;text-decoration:none;min-height:56px}'
+  + '.row:nth-of-type(even){background:#f4f5f7}.row:hover .t{text-decoration:underline}'
+  + '.row .t{font-size:18px;font-weight:650;color:#3b2bd1}.row>b{font-size:24px;font-weight:700}'
+  + '.row>b:first-of-type{background:#eef8f1;border-radius:6px;padding:0 6px}'
+  + '.row>b small{display:block;font-size:13px;font-weight:400}'
+  + '.chip{display:inline-block;font-size:14px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ddf3e4;'
+  + 'color:#0e5a2e;white-space:nowrap}'
+  + '.c24{background:#fde7b0;color:#5c3d00}.c1{background:#fddcdc;color:#8f1d1d}.cx{background:#eceef2;color:#3f4753}'
+  + '.cs{background:#dbeafe;color:#1e3a8a}'
+  + '.note{background:#fff;border:1px solid #d9dce3;border-radius:8px;padding:12px 14px}'
+  + 'details{margin:6px 0}summary{cursor:pointer;font-weight:650;min-height:32px}'
+  + '@media(max-width:640px){main,header{padding-left:12px;padding-right:12px}'
+  + 'header nav{flex-wrap:wrap}header form{flex:1 1 100%}header input{flex:1;min-width:0}.hd{display:none}'
+  + '.row{grid-template-columns:1fr 1fr;border:1px solid #d9dce3;border-radius:8px;margin-bottom:8px}'
+  + '.row>div{grid-column:1/-1}.row>b{text-align:left;font-size:20px}'
+  + '.row>b::before{content:attr(data-l);display:block;font-size:13px;text-transform:uppercase;color:#4b5563}'
+  + 'a,button{min-height:44px}header nav a,header form{display:flex;align-items:center}}'
+  + '.crumb{font-size:15px;margin:0 0 4px}'
   + '.facts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:6px 0}'
   + '.facts div,.tiles div{background:#fff;border:1px solid #d9dce3;border-radius:8px;padding:8px 12px}'
   + '.facts div:first-child{background:#eef8f1}.facts div{padding:3px 10px}'

@@ -15,30 +15,6 @@ async function api(path) { // Map cache + ETag revalidation + in-flight dedupe
   try { return await p; } finally { inflight.delete(path); }
 }
 
-function board(data) { // keyed rows patched in place: pot, fee, time left, entries
-  const now = Date.now();
-  const open = [];
-  const soon = [];
-  const shut = [];
-  for (const b of data.items) {
-    if (Date.parse(b.publishedAt) > now) soon.push(b);
-    else if (Date.parse(b.deadline) > now) open.push(b);
-    else shut.push(b);
-  }
-  open.sort((a, b) => Date.parse(a.deadline) - Date.parse(b.deadline));
-  soon.sort((a, b) => Date.parse(a.publishedAt) - Date.parse(b.publishedAt));
-  let pot = 0;
-  let n = 0;
-  for (const b of open) { pot += Number(b.potUsd) || 0; n += b.submissionCount || 0; }
-  document.title = 'Bounties - Potboard (unofficial make.fun frontend)';
-  return `<p class=strip data-k=strip><b>${open.length}</b> taking entries · <b>${money(pot)}</b>
- in live pots · <b>${n.toLocaleString('en-US')}</b> entries</p>
-<h2 data-k=h1>Taking entries (${open.length})</h2>${head('h1')}${open.map(row).join('')}
-<h2 data-k=h2>Opening soon (${soon.length})</h2>${head('h2')}${soon.map(row).join('')}
-<details data-k=x><summary>Closed, awaiting results (${shut.length})</summary>
-${head('h3')}${shut.map(row).join('')}</details>`;
-}
-
 function patch(root, html, view) {
   T.innerHTML = html;
   const next = [...T.content.children];
@@ -66,48 +42,44 @@ async function route(quiet) {
   current = path;
   for (const a of document.querySelectorAll('[data-nav]')) a.toggleAttribute('aria-current', kind === 'board');
   if (!quiet) scrollTo(0, 0);
-  if (kind !== 'bounty') side();
-  const early = cache.get(path)?.data || (kind === 'bounty' && fromBoard(dec(parts[1] || '')));
-  if (early) await paint(kind, early, parts, view);
-  else if (!quiet) main.innerHTML = '<p class=note>Loading...</p>';
-  let data = early;
-  if (!(early && turn)) {
-    try {
-      data = await api(path);
+  const cached = cache.get(path)?.data;
+  const vp = views();
+  const ask = cached && turn ? null : api(path);
+  if (ask) ask.catch(none);
+  if (!V && !cached && !quiet) main.innerHTML = '<p class=note>Loading...</p>';
+  let early = cached;
+  try {
+    await vp;
+    if (seq !== gen) return;
+    if (kind !== 'bounty') V.side();
+    early = cached || (kind === 'bounty' && V.fromBoard(dec(parts[1] || '')));
+    if (early) paint(kind, early, parts, view);
+    else if (!quiet) main.innerHTML = '<p class=note>Loading...</p>';
+    let data = early;
+    if (ask) {
+      data = await ask;
       if (seq !== gen) return;
-      if (data !== early) await paint(kind, data, parts, view);
-    } catch (e) {
-      if (seq !== gen) return;
-      fail(e, Boolean(early));
-      data = 0;
+      if (data !== early) paint(kind, data, parts, view);
     }
+    V.side(kind === 'bounty' && data);
+  } catch (e) {
+    if (seq !== gen) return;
+    fail(e, Boolean(early && V));
+    if (V) V.side();
   }
-  side(kind === 'bounty' && data);
   window.__shotReady = true;
 }
 
 function tick() {
   stamp();
-  for (const el of document.querySelectorAll('[data-t]')) el.textContent = left(el.dataset.t);
+  if (V) for (const el of document.querySelectorAll('[data-t]')) el.textContent = V.left(el.dataset.t);
   if (!document.hidden && current) route(true);
   clearTimeout(timer);
   timer = setTimeout(tick, 62000 - (Date.now() % 60000));
 }
 
 function views() {
-  return import('./views.js');
-}
-
-function side(d) {
-  const b = d && innerWidth >= 1100 && cache.get(ROUTES.board())?.data;
-  document.body.classList.toggle('sp', Boolean(b));
-  if (!b) return aside.replaceChildren();
-  const i = b.items.findIndex((x) => x.slug === d.slug);
-  if (i >= 0) b.items[i] = d;
-  const t = document.title;
-  patch(aside, board(b), 'board');
-  document.title = t;
-  for (const a of aside.querySelectorAll('.row')) if (a.dataset.k === d.slug) a.setAttribute('aria-current', 'page');
+  return import('./views.js').then(keep);
 }
 
 const cache = new Map();
@@ -115,70 +87,28 @@ const inflight = new Map();
 const BASE = 'https://make.fun/api';
 const T = document.createElement('template');
 const main = document.querySelector('main');
-const aside = document.querySelector('aside');
+let V = null;
 let gen = 0;
 let current = '';
 let timer = 0;
 
-export function esc(s) {
-  return String(s ?? '').replace(/[&<>"']/g, ent);
+export { ROUTES, cache, patch };
+
+function keep(m) {
+  V = m;
+  return m;
 }
 
-export function money(v) {
-  const n = Number(v) || 0;
-  return '$' + n.toLocaleString('en-US', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 });
-}
-
-export function left(iso) {
-  const ms = Date.parse(iso) - Math.floor(Date.now() / 60000) * 60000;
-  if (!(ms > 0)) return 'Closed';
-  const h = Math.floor(ms / 3600000);
-  const m = Math.floor(ms / 60000) % 60;
-  return h >= 48 ? Math.floor(h / 24) + 'd ' + (h % 24) + 'h' : h ? h + 'h ' + m + 'm' : m + 'm';
-}
-
-export function chip(c, long) {
-  const now = Date.now();
-  const end = Date.parse(c.deadline);
-  const at = c.opensAt || c.publishedAt;
-  const opens = Date.parse(at);
-  if (opens > now || (c.acceptingSubmissions === false && end > now)) {
-    const txt = long || !(opens > now) ? 'Opens ' + utc(opens) : 'Opens in ' + left(at);
-    return '<span class="chip cs" title="' + esc(at) + ' (UTC)">' + txt + '</span>';
-  }
-  const ms = end - now;
-  const cls = !(ms > 0) ? 'cx' : ms < 3600000 ? 'c1' : ms < 86400000 ? 'c24' : '';
-  return '<span class="chip ' + cls + '" title="' + esc(c.deadline) + ' (UTC)" data-t=' + esc(c.deadline) + '>' + left(c.deadline) + '</span>';
-}
-
-export function fee(v) {
-  return v == null || Number(v) === 0 ? 'Free' : money(v);
-}
-
-export function link(slug) {
-  return '#/bounty/' + encodeURIComponent(slug);
-}
-
-export const say = (n, w) => n.toLocaleString('en-US') + ' ' + w + (n === 1 ? '' : 's');
-
-function ent(c) {
-  return '&#' + c.charCodeAt(0) + ';';
-}
-
-function utc(t) {
-  return t > 0 ? new Date(t).toISOString().slice(0, 16).replace('T', ' ') + ' UTC' : 'soon';
+function none() {
+  return 0;
 }
 
 function dec(s) {
   try { return decodeURIComponent(s); } catch { return s; }
 }
 
-function hm() {
-  return new Date().toISOString().slice(11, 16) + ' UTC';
-}
-
 function stamp() {
-  document.querySelector('.stamp').textContent = 'updated ' + hm();
+  document.querySelector('.stamp').textContent = 'updated ' + new Date().toISOString().slice(11, 16) + ' UTC';
 }
 
 async function load(path, old, m) {
@@ -196,36 +126,14 @@ async function load(path, old, m) {
   return data;
 }
 
-function fromBoard(slug) {
-  const b = cache.get(ROUTES.board())?.data;
-  return b ? b.items.find((x) => x.slug === slug) || null : null;
-}
-
-function head(k) {
-  return '<div class=hd data-k=' + k + '><span></span><span>Live pot</span><span>Entry fee</span>'
-    + '<span>Time left</span><span>Entries</span></div>';
-}
-
-function row(b) {
-  const places = b.rewardsNow ? b.rewardsNow.length : 0;
-  return `<a class=row data-k=${esc(b.slug)} href="${link(b.slug)}"><div><span class=t>${esc(b.title)}</span>
-<br><small>${esc(b.category)} · ${esc(b.sponsor && b.sponsor.name)} · ${say(places, 'place')}</small></div>
-<b data-l="Live pot">${money(b.potUsd)}</b><b data-l="Entry fee">${fee(b.entryFeeUsd)}</b>
-<b data-l="Time left">${chip(b)}</b><b data-l=Entries>${(b.submissionCount || 0).toLocaleString('en-US')}</b></a>`;
-}
-
-async function paint(kind, data, parts, view) {
-  if (kind === 'board') {
-    patch(main, board(data), view);
-  } else {
-    const V = await views();
-    patch(main, V[kind](data, Number(parts[3]) || 1, fromBoard(dec(parts[1] || ''))), view);
-  }
+function paint(kind, data, parts, view) {
+  patch(main, V[kind](data, Number(parts[3]) || 1, V.fromBoard(dec(parts[1] || ''))), view);
   stamp();
 }
 
 function fail(e, keep) {
-  const msg = e && e.message === 'not found' ? 'Not found on make.fun.' : 'Could not load from make.fun (' + esc(e && e.message) + ').';
+  const why = String(e && e.message).replace(/[<>&"']/g, '');
+  const msg = why === 'not found' ? 'Not found on make.fun.' : 'Could not load from make.fun (' + why + ').';
   const note = '<p class=note data-k=err>' + msg + ' <a href="" data-retry>Retry</a></p>';
   if (keep) main.insertAdjacentHTML('afterbegin', note);
   else { main.innerHTML = note; main.dataset.v = ''; document.title = 'Error - Potboard (unofficial)'; }
@@ -243,5 +151,5 @@ document.addEventListener('submit', (e) => {
   const h = e.target.elements.h.value.trim().replace(/^@/, '');
   if (h) location.hash = '#/u/' + encodeURIComponent(h);
 });
-route().then(() => (window.requestIdleCallback || setTimeout)(views));
+route();
 timer = setTimeout(tick, 62000 - (Date.now() % 60000));

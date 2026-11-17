@@ -61,6 +61,36 @@ try {
   await go(page, bounty);
   ok(await page.locator('main .facts b').count() === 4, 'bounty facts render');
   ok(await page.locator('main .rw tbody tr').count() > 1, 'live rewards render');
+  const dateChecks = await page.evaluate(async () => {
+    const { cache, ROUTES } = await import('/app.js');
+    const { bounty } = await import('/views.js');
+    const data = cache.get(ROUTES.bounty('makefun-frontend-01')).data;
+    const final = data.phases.find((p) => p.key === 'final');
+    const expected = new Date(final.endsAt).toLocaleString('en-GB', {
+      timeZone: 'UTC', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+      hourCycle: 'h23', timeZoneName: 'short',
+    });
+    const cell = (root) => [...root.querySelectorAll('.dl > div')]
+      .find((el) => el.querySelector('.lab')?.textContent === 'Final phase ends');
+    // Exercise the renderer with reordered/absent phases from this same live response.
+    const render = (phases) => {
+      const root = document.createElement('div');
+      root.innerHTML = bounty({ ...data, phases });
+      return root;
+    };
+    const reordered = render([final, ...data.phases.filter((p) => p !== final)]);
+    const absent = render(data.phases.filter((p) => p.key !== 'final'));
+    return {
+      live: cell(document)?.querySelector('time')?.textContent === expected
+        && cell(document)?.querySelector('time')?.getAttribute('datetime') === final.endsAt
+        && !document.querySelector('.dl').textContent.includes('Results by'),
+      reordered: cell(reordered)?.querySelector('time')?.textContent === expected,
+      absent: !cell(absent) && absent.querySelectorAll('.dl > div').length === 2,
+    };
+  });
+  ok(dateChecks.live, 'rendered Final phase ends matches the live final endsAt in UTC');
+  ok(dateChecks.reordered, 'final phase date is selected by key regardless of array order');
+  ok(dateChecks.absent, 'missing final phase omits its optional date');
   ok(await page.locator('aside .row[aria-current]').count() === 1, 'contextual board highlights the bounty');
   await follow(page, page.locator('main .tabs a').nth(1));
   ok(await page.locator('main .lb tbody tr').count() > 0, 'leaderboard renders live ranked entries');

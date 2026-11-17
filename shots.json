@@ -10,8 +10,8 @@
     },
     "dpr": 1,
     "quality": 60,
-    "captured_at": "2026-11-17T11:22:14.579Z",
-    "bytes": 107378
+    "captured_at": "2026-11-17T11:26:09.812Z",
+    "bytes": 107655
   },
   {
     "file": "2-leaderboard.jpg",
@@ -24,8 +24,8 @@
     },
     "dpr": 1,
     "quality": 55,
-    "captured_at": "2026-11-17T11:22:15.730Z",
-    "bytes": 52907
+    "captured_at": "2026-11-17T11:26:10.555Z",
+    "bytes": 52709
   },
   {
     "file": "3-profile.jpg",
@@ -37,7 +37,7 @@
     },
     "dpr": 1,
     "quality": 60,
-    "captured_at": "2026-11-17T11:22:16.652Z",
-    "bytes": 65805
+    "captured_at": "2026-11-17T11:26:11.324Z",
+    "bytes": 65755
   }
 ]

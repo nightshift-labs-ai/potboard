@@ -156,11 +156,12 @@ function rewards(c) {
 
 function dates(c) {
   const ph = c.phases || [];
+  const final = ph.find((x) => x.key === 'final');
   const at = c.opensAt || c.publishedAt;
   let li = '';
   for (const x of ph) li += '<li><b>' + esc(x.title) + '</b> ' + when(x.startsAt, MIN) + ' - ' + when(x.endsAt, MINZ) + '</li>';
   return '<h2>Dates</h2><div class=dl>' + cell(Date.parse(at) > Date.now() ? 'Opens' : 'Opened', at)
-    + cell('Deadline', c.deadline) + cell('Results by', ph.length ? ph[ph.length - 1].endsAt : '') + '</div><ul class=ph>' + li + '</ul>';
+    + cell('Deadline', c.deadline) + (final?.endsAt ? cell('Final phase ends', final.endsAt) : '') + '</div><ul class=ph>' + li + '</ul>';
 }
 
 const merged = new WeakMap();

@@ -26,6 +26,7 @@ function board(data) { // keyed rows patched in place: pot, fee, time left, entr
  in live pots · <b>${n.toLocaleString('en-US')}</b> entries${soonest(open)}</p>
 <div class=ctl data-k=ctl>${SORTS.map(pickSort).join('')}<span></span>${['', ...cats].map(pickCat).join('')}${seek(open.length + soon.length + shut.length, pool)}</div>
 <h2 data-k=h1>Taking entries (${open.length})</h2>${head('h1')}${open.map(row).join('')}
+${open.length + soon.length + shut.length ? '' : '<p class=note data-k=empty>No bounties match these filters.</p>'}
 <h2 data-k=h2>Opening soon (${soon.length})</h2>${head('h2')}${soon.map(row).join('')}
 <details data-k=x><summary>Closed, awaiting results (${shut.length})</summary>
 ${head('h3')}${shut.map(row).join('')}</details>`;
@@ -63,25 +64,64 @@ function leaderboard(d, page = 1, item) { // 50 rows a page
   document.title = 'Leaderboard: ' + title + ' - Potboard (unofficial)';
   return `<div class=lbh data-k=h><p class=crumb><a href="#/">Bounties</a> › <a href="${link(slug)}">${esc(title)}</a></p>
 <h1>${esc(title)}</h1>${tabs(slug, all.length, true, item && item.submissionCount)}</div>
-${band(all, col, item)}${pg}
+${band(all, col, item)}${pg}${all.length ? '' : '<p class=note data-k=empty>No ranked entries yet.</p>'}
 <table class=lb data-k=p${p}><thead><tr><th class=num>#</th><th>Entrant</th>
 <th class=num>${esc(col.title)}${micro(col.source) ? '<small>90% interval</small>' : ''}</th><th class=num>Prize</th></tr></thead>
 <tbody>${all.slice((p - 1) * 50, p * 50).map(lbRow(col, item)).join('')}</tbody></table>
 ${pg.replace('data-k=pg', 'data-k=pg2')}`;
 }
 
-function profile(u) {
+function profile(u, page = 1) { // bounded, addressable pages; no extra request
   const r = u.record || {};
   const sol = (u.solutions || []).slice().sort(byPlace);
+  const pages = Math.max(1, Math.ceil(sol.length / 10));
+  const p = Math.min(Math.max(1, page), pages);
+  const pg = profilePager(u.handle, p, pages, sol.length);
   document.title = (u.handle || 'Profile') + ' - Potboard (unofficial)';
   return `<div data-k=h><p class=crumb><a href="#/">Bounties</a> › Profile</p>
 <div class=who><img class=av alt="" crossorigin=anonymous src="${esc(avatar(u))}"><div>
-<h1>${esc(u.display_name || u.handle)}</h1><p class=meta>@${esc(u.handle)}${joined(u.joined_at)}</p></div></div></div>
+<h1>${esc(u.display_name || u.handle)}</h1><p class=meta>@${esc(u.handle)}${joined(u.joined_at)}</p></div></div>
+${u.bio ? '<p class=bio>' + esc(u.bio) + '</p>' : ''}${publicLinks(u)}</div>
 <div class=tiles data-k=t>${tile('Bounties entered', r.competitions_entered)}${tile('Placed', r.competitions_placed)}
 ${tile('Won', r.competitions_won)}${tile('Best place', r.best_placement ? place(r.best_placement) : null)}${tile('Prizes', money(r.prize_usd))}</div>
-<div data-k=s class=pf><h2>${solHead(sol)}, best place first</h2><table class=sol><thead><tr><th>Place</th>
-<th>Bounty / solution</th><th class=num>Score</th><th class=num>Prize</th></tr></thead><tbody>${sol.slice(0, 20).map(solRow).join('')}</tbody></table>
-${sol.length > 20 ? '<p class=meta>Showing the first 20 of ' + sol.length + '.</p>' : ''}</div>`;
+${recentPayouts(u.payouts || [])}
+<div data-k=s class=pf><h2 id=solutions tabindex=-1>${solHead(sol)}, best place first</h2>${pg}
+${sol.length ? '<table class=sol><thead><tr><th>Place</th><th>Bounty / solution</th><th class=num>Score</th><th class=num>Prize</th></tr></thead><tbody>'
+  + sol.slice((p - 1) * 10, p * 10).map(solRow).join('') + '</tbody></table>' : '<p class=note>No public solutions yet.</p>'}${pg}</div>`;
+}
+
+function profilePager(handle, p, pages, total) {
+  if (pages === 1) return '';
+  const base = '#/u/' + encodeURIComponent(handle) + '/';
+  return '<nav class=pager aria-label="Solution pages">Solutions ' + ((p - 1) * 10 + 1) + '-' + Math.min(p * 10, total)
+    + ' of ' + total + ' · Page ' + p + ' of ' + pages + ' · '
+    + (p > 1 ? '<a href="' + base + (p - 1) + '">Prev</a>' : 'Prev') + ' · '
+    + (p < pages ? '<a href="' + base + (p + 1) + '">Next</a>' : 'Next') + '</nav>';
+}
+
+function external(url, label) {
+  try {
+    const u = new URL(url);
+    if (!['https:', 'http:'].includes(u.protocol)) return '';
+    return '<a href="' + esc(u.href) + '" target=_blank rel="noopener noreferrer">' + esc(label) + ' ↗</a>';
+  } catch { return ''; }
+}
+
+function publicLinks(u) {
+  const links = [];
+  if (u.github_login) links.push(external('https://github.com/' + encodeURIComponent(u.github_login), 'GitHub'));
+  if (u.x) links.push(external('https://x.com/' + encodeURIComponent(String(u.x).replace(/^@/, '')), 'X'));
+  if (u.wallet?.explorer_url) links.push(external(u.wallet.explorer_url, 'Public wallet'));
+  if (u.discord) links.push('Discord: ' + esc(u.discord));
+  return links.length ? '<p class=links>' + links.filter(Boolean).join(' · ') + '</p>' : '';
+}
+
+function recentPayouts(payouts) {
+  if (!payouts.length) return '';
+  return '<section data-k=payouts><h2>Recent payouts</h2><ul class=payouts>' + payouts.slice().sort((a, b) => Date.parse(b.paid_at) - Date.parse(a.paid_at))
+    .slice(0, 3).map((p) => '<li><b>' + money(p.amount_usd) + '</b> · <a href="' + link(p.competition?.slug || '') + '">'
+      + esc(p.competition?.title || p.competition?.slug) + '</a> · ' + when(p.paid_at, DAY) + ' '
+      + external(p.explorer_url, 'Receipt') + '</li>').join('') + '</ul></section>';
 }
 
 function pager(p, n, t, s, f) {
@@ -177,8 +217,7 @@ function solRow(s) {
     + (Number(s.prize_usd) > 0 ? money(s.prize_usd) : '') + '</td></tr>';
 }
 
-// Leaderboard band: Live pot and Time left from the cached board item (0 requests; left out on a deep
-// link with no cached board), the ranked count, and row 1 as the leader.
+// Leaderboard band: cached pot and deadline (no extra request), ranked count and current leader.
 function band(all, col, item) {
   const top = all[0];
   const n = item && item.submissionCount;
@@ -298,7 +337,7 @@ function side(d) {
   const b = d && innerWidth >= 1100 && cache.get(ROUTES.board())?.data;
   const aside = document.querySelector('aside');
   document.body.classList.toggle('sp', Boolean(b));
-  last = b && d;
+  last = d || null;
   if (!b) return aside.replaceChildren();
   const i = b.items.findIndex((x) => x.slug === d.slug);
   if (i >= 0) b.items[i] = d;
@@ -328,16 +367,20 @@ function order(a, b) {
 }
 
 function choose(el) {
+  const focus = document.activeElement === el;
   if (el.dataset.s) sort = el.dataset.s;
   else if ('q' in el.dataset) q = el.value;
   else cat = el.dataset.c;
   const d = cache.get(ROUTES.board())?.data;
   if (d && main.dataset.v === ROUTES.board()) patch(main, board(d), main.dataset.v);
   else if (last) side(last);
+  if (focus && !el.isConnected && !('q' in el.dataset)) {
+    [...document.querySelectorAll('[data-s],[data-c]')].find((b) => b.dataset.s === el.dataset.s && b.dataset.c === el.dataset.c)?.focus({ preventScroll: true });
+  }
 }
 
 function head(k) {
-  return '<div class=hd data-k=' + k + '><span></span><span>Live pot</span><span>Fee</span>'
+  return '<div class=hd data-k=head-' + k + '><span></span><span>Live pot</span><span>Fee</span>'
     + '<span>Time left</span><span>Entries</span></div>';
 }
 
@@ -438,6 +481,7 @@ const MIN = { ...DAY, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' };
 const MINZ = { ...MIN, timeZoneName: 'short' };
 
 const CSS = '*{box-sizing:border-box}a{color:#3b2bd1}:focus-visible{outline:3px solid #3b2bd1;outline-offset:2px}'
+  + 'h1[tabindex]:focus,#solutions:focus,main[tabindex]:focus{outline:none}'
   + 'header{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;padding:8px 20px;background:#fff;'
   + 'border-bottom:1px solid #d9dce3;font-size:15px}'
   + 'header .wm{font-weight:800;font-size:20px;color:#14171c;text-decoration:none}'
@@ -448,7 +492,7 @@ const CSS = '*{box-sizing:border-box}a{color:#3b2bd1}:focus-visible{outline:3px 
   + 'header button,.btn{font:inherit;padding:5px 12px;border:0;border-radius:6px;background:#3b2bd1;color:#fff;'
   + 'cursor:pointer;text-decoration:none;display:inline-block}'
   + '.stamp,.meta,small{color:#4b5563;font-size:15px}'
-  + 'main{max-width:1100px;margin:0 auto;padding:14px 20px 30px}'
+  + 'main{min-width:0;max-width:1100px;margin:0 auto;padding:14px 20px 30px}'
   + 'footer{max-width:1100px;margin:0 auto;padding:16px 20px 40px;color:#4b5563;font-size:14px;border-top:1px solid #d9dce3}'
   + 'h1{font-size:28px;margin:4px 0}h2{font-size:22px;margin:18px 0 8px}'
   + '.strip{background:#fff;border:1px solid #d9dce3;border-radius:8px;padding:8px 14px;font-size:17px}'
@@ -493,6 +537,8 @@ const CSS = '*{box-sizing:border-box}a{color:#3b2bd1}:focus-visible{outline:3px 
   + '.lb small,.sol small{display:block;font-size:14px;font-weight:400;color:#4b5563;overflow:hidden;text-overflow:ellipsis}'
   + '.who{display:flex;align-items:center;gap:4px}.who h1,.who p{margin:0}.tiles div:last-child{background:#eef8f1}'
   + '.pf h2{font-size:20px;margin:10px 0 4px}'
+  + '.bio{max-width:70ch;margin:8px 0;white-space:pre-wrap}.links{margin:6px 0}.payouts{margin:4px 0;padding-left:22px}'
+  + '.bio,.links,.payouts,.who{overflow-wrap:anywhere}.who>div{min-width:0}.av{flex-shrink:0}'
   + '.lab{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:#4b5563;font-weight:700}'
   + '.two{display:grid;gap:16px}@media(min-width:760px){.two{grid-template-columns:1fr 1fr}}'
   + 'table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #d9dce3}'
@@ -534,8 +580,6 @@ const CSS = '*{box-sizing:border-box}a{color:#3b2bd1}:focus-visible{outline:3px 
   + '.ctl output{align-self:center;font-size:13px;font-weight:700;color:#4a5060}';
 
 document.head.insertAdjacentHTML('beforeend', '<style>' + CSS + '</style>');
-document.querySelector('footer').insertAdjacentHTML('afterbegin', '<p class=how>first load: index.html + app.js · views by '
-  + 'import&#40;) · ETag-revalidated cache · rows patched in place · 50-row pages</p>');
 
 // Paints a view: first from memory (cached data or the cached board item), then the fresh data if it changed.
 export async function show(kind, parts, view, ask, cached, quiet, seq) {
@@ -543,7 +587,7 @@ export async function show(kind, parts, view, ask, cached, quiet, seq) {
   for (const a of document.querySelectorAll('[data-nav]')) a.toggleAttribute('aria-current', kind === 'board');
   let early = cached;
   try {
-    if (kind !== 'bounty') side();
+    if (!['bounty', 'leaderboard'].includes(kind)) side();
     early = cached || (kind === 'bounty' && fromBoard(dec(parts[1] || '')));
     if (kind !== 'board' && fromBoard(dec(parts[1] || ''))) N.mem++;
     if (early) paint(kind, early, parts, view);
@@ -554,13 +598,25 @@ export async function show(kind, parts, view, ask, cached, quiet, seq) {
       if (seq !== gen) return;
       if (data !== early) paint(kind, data, parts, view);
     }
-    side(kind === 'bounty' && data);
+    side(kind === 'bounty' ? data : kind === 'leaderboard' && fromBoard(dec(parts[1] || '')));
   } catch (e) {
     if (seq !== gen) return;
     fail(e, Boolean(early));
-    side();
+    side(kind === 'bounty' ? early : kind === 'leaderboard' && fromBoard(dec(parts[1] || '')));
   }
   stamp();
+  if (!quiet && seq === gen) {
+    const paging = renderedView === view;
+    renderedView = view;
+    renderedHash = location.hash;
+    const key = history.state?.potboardKey;
+    const saved = scrollPositions.get(key);
+    if (saved == null) history.replaceState({ ...history.state, potboardKey: ++historyKey }, '');
+    const focus = main.querySelector(paging && kind === 'profile' ? '#solutions' : 'h1') || main;
+    focus.setAttribute('tabindex', '-1');
+    focus.focus({ preventScroll: true });
+    scrollTo(0, saved ?? (paging && kind === 'profile' ? focus.getBoundingClientRect().top + scrollY - 12 : 0));
+  }
 }
 
 // Delegated listeners: the retry link re-runs the route; the header form opens a profile.
@@ -586,9 +642,19 @@ export function tock() {
 
 function paint(kind, data, parts, view) {
   const views = { board, bounty, leaderboard, profile };
-  patch(main, views[kind](data, Number(parts[3]) || 1, fromBoard(dec(parts[1] || ''))), view);
+  patch(main, views[kind](data, Math.floor(Number(parts[kind === 'profile' ? 2 : 3])) || 1, fromBoard(dec(parts[1] || ''))), view);
   stamp();
 }
+
+let renderedView = '';
+let renderedHash = '';
+let historyKey = 0;
+const scrollPositions = new Map();
+history.scrollRestoration = 'manual';
+addEventListener('scroll', () => {
+  if (location.hash === renderedHash) scrollPositions.set(history.state?.potboardKey, scrollY);
+}, { passive: true });
+addEventListener('resize', () => { if (last) side(last); });
 
 function stamp() {
   document.querySelector('.stamp').textContent = 'updated ' + new Date().toISOString().slice(11, 16) + ' UTC'

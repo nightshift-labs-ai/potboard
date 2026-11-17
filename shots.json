@@ -1,5 +1,43 @@
 [
-  { "file": "1-board-bounty.jpg", "what": "cover: the board beside the open bounty", "path": "#/bounty/makefun-frontend-01", "via": "#/", "viewport": { "width": 1280, "height": 800 }, "dpr": 1 },
-  { "file": "2-leaderboard.jpg", "what": "a leaderboard page", "path": "#/bounty/threejs-fps-02/leaderboard", "via": "#/", "viewport": { "width": 800, "height": 500 }, "dpr": 1.6 },
-  { "file": "3-profile.jpg", "what": "a profile", "path": "#/u/icantcodefyi", "viewport": { "width": 800, "height": 500 }, "dpr": 1.6 }
+  {
+    "file": "1-board-bounty.jpg",
+    "what": "live board beside bounty overview, pot, fees, entries, rewards and dates",
+    "path": "#/bounty/makefun-frontend-01",
+    "via": "#/",
+    "viewport": {
+      "width": 1100,
+      "height": 800
+    },
+    "dpr": 1,
+    "quality": 60,
+    "captured_at": "2026-11-17T11:22:14.579Z",
+    "bytes": 107378
+  },
+  {
+    "file": "2-leaderboard.jpg",
+    "what": "live ranked entries, scores and prize amounts",
+    "path": "#/bounty/makefun-frontend-01/leaderboard",
+    "via": "#/",
+    "viewport": {
+      "width": 800,
+      "height": 540
+    },
+    "dpr": 1,
+    "quality": 55,
+    "captured_at": "2026-11-17T11:22:15.730Z",
+    "bytes": 52907
+  },
+  {
+    "file": "3-profile.jpg",
+    "what": "public profile with bio, record, recent payouts and paginated solutions",
+    "path": "#/u/nightshift-labs",
+    "viewport": {
+      "width": 800,
+      "height": 800
+    },
+    "dpr": 1,
+    "quality": 60,
+    "captured_at": "2026-11-17T11:22:16.652Z",
+    "bytes": 65805
+  }
 ]

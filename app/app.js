@@ -19,14 +19,18 @@ function patch(root, html, view) {
   T.innerHTML = html;
   const next = [...T.content.children];
   const prev = [...root.children];
-  if (root.dataset.v !== view || next.length !== prev.length) {
+  if (root.dataset.v !== view) {
     root.replaceChildren(...next);
     root.dataset.v = view;
     return;
   }
+  const keyed = new Map(prev.map((el) => [el.dataset.k, el]));
   for (let i = 0; i < next.length; i++) {
-    if (prev[i].dataset.k !== next[i].dataset.k || !prev[i].isEqualNode(next[i])) prev[i].replaceWith(next[i]);
+    const old = keyed.get(next[i].dataset.k);
+    const el = old?.isEqualNode(next[i]) ? old : next[i];
+    if (root.children[i] !== el) root.insertBefore(el, root.children[i] || null);
   }
+  while (root.children.length > next.length) root.lastElementChild.remove();
 }
 
 async function route(quiet) {
@@ -37,9 +41,9 @@ async function route(quiet) {
   const path = ROUTES[kind](encodeURIComponent(dec(parts[1] || '')));
   const seq = ++gen;
   const cached = cache.get(path)?.data;
-  const turn = !quiet && kind === 'leaderboard' && main.dataset.v === path;
+  const turn = !quiet && ['leaderboard', 'profile'].includes(kind) && main.dataset.v === path;
   current = path;
-  if (!quiet) { N.req = N.same = N.mem = 0; scrollTo(0, 0); }
+  if (!quiet) N.req = N.same = N.mem = 0;
   const ask = cached && turn ? null : api(path);
   if (!ask) N.mem++;
   ask?.catch(dec);
